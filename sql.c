@@ -62,6 +62,7 @@ struct dynamic_buffer{
 	int size ; 
 
 } ;
+char * temp = NULL  ; 
 
 int first = 0 ; 
 
@@ -825,6 +826,51 @@ void del() {
 	}
 }
 
+
+
+int seperator_new(int c ){
+	return  c == '\0' || strchr(",()+-/*=~%<>[];", c) != NULL ; 
+}
+
+
+
+
+char** tokenizer(char *buf ){
+int j = 0  ; 
+int m = 0 ; 
+int len = strlen(buf) ; 
+char** temp = malloc(300 * ( char* )); 
+char *te[300] ; 
+for ( int k = 0 ; k < len  ; k++ ){
+if (isspace(buf[k])  ) {
+			te[j] = '\0' ; 
+            temp[m] = strdup(te) ; 
+            m++ ; 
+            j = 0 ; 
+        }
+if ( seperator_new(buf[k])){
+			te[j] = '\0' ; 
+            temp[m] = strdup(te) ; 
+            m++ ; 
+            j = 0 ; 
+			char tem[2] = {buf[k] , '\0'} ; 
+            temp[m] = strdup(tem)  ; 
+            m++ ; 
+        }
+else { 
+            te[j] = buf[k] ; 
+            j++ ; 
+        }
+    }
+te[j] = '\0' ; 
+temp[m] = strdup(te)  ; 
+m++ ; 
+temp[m] = NULL ; 
+return temp ; 
+}
+
+
+
 char *query_data_recovery(){
     int i = 0 ;
     int total = 0 ;
@@ -864,8 +910,11 @@ void process_raw_key_press(){
 			for ( int i = edit.cursor_rows + 1 ; i < edit.row_length ; i++ ){
 				edit.ri[i].query = false ; 
 			}
-			 edit.cursor_rows = edit.cursor_rows + 1  ; 
+			edit.query_lines = edit.cursor_rows + 1 ; 
+			 edit.cursor_rows = edit.cursor_rows + 1  ;
+			 edit.cursor_cols = 0 ; 
 			status_msg_input("Thq query is under execution") ; 
+			temp = query_data_recovery() ; 	
 			break ; 
 	  case ctrl('w'): 
 		saving() ; 
