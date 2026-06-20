@@ -1,0 +1,10 @@
+The next part in here is the parser see we posted some queries now what to do with it we need to properly stucture  it right so now the thing we do is the very first thing to do is we right now just have the normal character floating out we make the strings of them and then store it out so that we can figure out what to do next about it the same is need to be done for the data which we have present in the thing we keep it make it as a grid so then like if we want to assign something we make it so this is tokenizer '
+So see one curcial info is I am making the whole backend for the csv files cause its relatively easier to work with
+So probably for the other files I might make a changer of it so yeah its like that 
+
+
+One issue which was extremely hurting my eyes was about the files we load those stuture dont look good in the a proper structure for the thing the lined stuff is needed so yeah I 
+
+
+
+The next part is about the meta commands there are several meta commands like .help or .save or .load or more like those these are complete different than the normal sql queries so we need to make them aligned here or make them separately 
