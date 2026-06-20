@@ -33,6 +33,7 @@ typedef struct row_input{
 void status_msg_input(const char* msg, ...);
 void screen_ready(void);
 int  raw_key_press(void);
+char *query_data_recovery(void);
  
 struct editor_global { 
 	int cursor_rows ; 
@@ -54,7 +55,12 @@ struct editor_global {
 
 } ;
 
+struct proper_data_we_need { 
+	char **query  ; 
+	char ***data ; 
+} ;
 
+struct proper_data_we_need proper_data ; 
 struct editor_global  edit ; 
 
 struct dynamic_buffer{
@@ -270,10 +276,12 @@ char *before_saving(int *buflen){
 	char *buf  = malloc(len+edit.row_length)  ; 
 	char *p = buf ; 
 	for ( int i = 0 ; i < edit.row_length  ; i++ ){
+		if ( edit.ri[i].query == false){
 		memcpy( p , edit.ri[i].data , edit.ri[i].size) ; 
 		p = p + edit.ri[i].size ; 
 		*p = '\n' ; 
 		p++ ; 
+		}
 	}
 
    return buf ; 
@@ -585,7 +593,45 @@ void text_in_input_buffer(char *file){
    first = 1 ; 
 
 } 
+void insert_char( row_input *line ,  int pos ,  int c ){ 
+	if ( pos < 0 || pos > line->size ){ 
+		pos  = line->size ; 
+	}
+	line->data = realloc( line->data , line->size + 2 ) ; 
+    memmove( &line->data[pos+ 1 ] , &line->data[pos] ,  line->size - pos + 1 ) ; 
+	line->size++ ; 
+	line->data[pos] = c ; 
+	render_input(line)  ; 
+	edit.changes++ ; 
+}
 
+void excel_like(){
+	char ***temp = proper_data.data ; 
+	int len = 0  ; 
+	int counter = 0 ; 
+	for ( int i = 0 ; temp[i] != NULL  ; i++ ){
+
+		for ( int j = 0 ; j < edit.row_length ; j++ ){
+			if ( edit.ri[j].query == true){
+				continue ; 
+			}
+			if ( strlen(temp[i][j]) > len ){
+				len =  strlen(temp[i][j])  ; 
+			}
+		}
+		for ( int j = 0 ; j < edit.row_length ; j++){
+			if ( edit.ri[j].query == true){
+				continue ; 
+			}			
+			int ct = 0 ; 
+			while ( ct <= len - strlen(temp[i][j]) + 1  ){
+				insert_char(&edit.ri[j] , counter + strlen(temp[i][j]) , ' ') ; 
+				ct++ ; 
+			}
+		}
+		counter = len + 1  ; 
+}
+}
 
 void disable_raw_mode(){
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &edit.original) == -1){
@@ -593,7 +639,6 @@ void disable_raw_mode(){
 	}
 }
 
-  
 
 void rawmode(){
     if (tcgetattr(STDIN_FILENO, &edit.original) == -1){
@@ -772,17 +817,7 @@ void append_delete_lines(row_input * row  , char *s , size_t len ){
 
 
 
-void insert_char( row_input *line ,  int pos ,  int c ){ 
-	if ( pos < 0 || pos > line->size ){ 
-		pos  = line->size ; 
-	}
-	line->data = realloc( line->data , line->size + 2 ) ; 
-    memmove( &line->data[pos+ 1 ] , &line->data[pos] ,  line->size - pos + 1 ) ; 
-	line->size++ ; 
-	line->data[pos] = c ; 
-	render_input(line)  ; 
-	edit.changes++ ; 
-}
+
 
 void del_char( row_input *line  , int pos ){ 
 	if ( pos < 0 || pos > line->size ){ 
@@ -832,21 +867,74 @@ int seperator_new(int c ){
 	return  c == '\0' || strchr(",()+-/*=~%<>[];", c) != NULL ; 
 }
 
+char ***data_tokenizer(){
+	int size = 0 ; 
+	for ( int i = 0 ; i < edit.row_length ; i++ ){
+		size = size + edit.ri[i].size ; 
+	}
+	char*** data = malloc( size*(sizeof(edit)) ); 
+	int data_pointer = 0 ;
+	int i = 0 ; 
+	while ( edit.ri[i].query == true){
+		i++ ; 
+	}
+	while ( i < edit.row_length ){
+		char te[300] ; 
+		int j = 0  ; 
+		int m = 0 ; 
+		char* temp = edit.ri[i].data ; 
+		char** strings = malloc(edit.ri[i].size * sizeof(char*) ); 
+		int len = edit.ri[i].size  ;
+		bool exc = false ; 
+		for ( int k = 0 ; k < len ; k++ ){
+			if ( exc == false && temp[k] == ','){
+				te[j] = '\0' ; 
+          		  strings[m] = strdup(te) ; 
+				  m++ ; 
+			 	 j = 0 ; 
+			}
+			else if (temp[k] == '"' ){
+				if ( exc == true ){
+					exc = false ; 
+				}
+				else { 
+					exc = true ; 
+				}
+				continue ; 
+			}
+			else { 
+				te[j] = temp[k] ; 
+           		 j++ ; 
+			}
+		}
+		te[j] = '\0' ; 
+		strings[m] = strdup(te) ; 
+		m++ ; 
+		strings[m] = NULL ; 
+		
+		data[data_pointer ] = strings ; 
+		data_pointer++ ; 
+		i++ ; 
+
+	}
+	return data ; 
+}
 
 
-
-char** tokenizer(char *buf ){
+char** tokenizer(){
+	char *buf  = query_data_recovery() ; 
 int j = 0  ; 
 int m = 0 ; 
 int len = strlen(buf) ; 
-char** temp = malloc(300 * ( char* )); 
+char** temp = malloc(300 * sizeof( char* )); 
 char *te[300] ; 
 for ( int k = 0 ; k < len  ; k++ ){
 if (isspace(buf[k])  ) {
 			te[j] = '\0' ; 
             temp[m] = strdup(te) ; 
             m++ ; 
-            j = 0 ; 
+            j = 0 ;
+			    continue;  
         }
 if ( seperator_new(buf[k])){
 			te[j] = '\0' ; 
@@ -886,6 +974,26 @@ char *query_data_recovery(){
     return buf ;
 }
 
+void meta_commnds(char *temp){
+	if ( strcmp(temp , ".save" )){
+		saving() ;
+	}
+	else if ( strcmp(temp , ".load")){
+
+	}
+}
+
+void process_query(){
+	char **buf = proper_data.query ;
+	for ( int i = 0 ; buf[i] != NULL  ; i++ ){
+		if ( buf[i][0] == '.'){
+			meta_commnds(buf[i]) ; 
+		}
+	}
+}
+
+
+
 void process_raw_key_press(){
     static int  quit_times = quit ; 
 	int word  = raw_key_press() ; 
@@ -914,7 +1022,16 @@ void process_raw_key_press(){
 			 edit.cursor_rows = edit.cursor_rows + 1  ;
 			 edit.cursor_cols = 0 ; 
 			status_msg_input("Thq query is under execution") ; 
-			temp = query_data_recovery() ; 	
+			 if (proper_data.query != NULL) {
+				free(proper_data.query);   
+				proper_data.query = NULL;
+			}
+			if (proper_data.data != NULL) {
+				free(proper_data.data);     
+				proper_data.data = NULL;
+			}
+			proper_data.query = tokenizer() ; 	
+			proper_data.data = data_tokenizer() ; 
 			break ; 
 	  case ctrl('w'): 
 		saving() ; 
@@ -1157,6 +1274,8 @@ void screen_ready(){
 	dynamic_buffer_append(&temp, "\x1b[?25l" , 6 ) ; 
 	dynamic_buffer_append(&temp, "\x1b[H" , 3) ; 
 	txt_print( &temp ) ; 
+	proper_data.data = data_tokenizer() ; 
+	excel_like() ; 
 	status_line(&temp) ; 
 	status_msg(&temp) ; 
         char buf[32] ; 
@@ -1219,6 +1338,8 @@ void starter(){
 	  edit.comment_start = -1 ; 
 	edit.col_offset = 0 ; 
 	edit.query_lines = 0 ; 
+	proper_data.data = NULL ; 
+	proper_data.query = NULL ; 
 
       if(get_window_size(&edit.rows , &edit.cols) == -1 ) { 
 		die("get_window_size") ; 
