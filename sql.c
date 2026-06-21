@@ -52,7 +52,7 @@ struct editor_global {
 	time_t messege_time ; 
 	int comment_start  ; 
 	int query_lines ; 
-
+	int *col_max_sizes ; 
 } ;
 
 struct proper_data_we_need { 
@@ -611,6 +611,9 @@ void insert_char( row_input *line ,  int pos ,  int c ){
 
 void excel_like(){
     char ***temp = proper_data.data ;
+	edit.col_max_sizes = NULL ; 
+	free(edit.col_max_sizes) ; 
+
 	if ( temp == NULL ){
 		return ; 
 	}
@@ -620,17 +623,16 @@ void excel_like(){
 			cols++ ; 
 	}
 }
+edit.col_max_sizes  = malloc(cols) ; 
 	int *max_size = calloc(cols , sizeof(int)) ; 
 	for ( int i = 0 ; temp[i] != NULL ; i++ ){
 		for ( int j = 0 ; j < cols && temp[i][j] ; j++ ){
 				if ( strlen(temp[i][j]) > max_size[j] ){
 					max_size[j] = strlen(temp[i][j]) ; 
+					edit.col_max_sizes[j] = max_size[j] ; 
 				} 
 		}
 	}
-
-
-
 	for ( int i = 0 ; temp[i] != NULL ; i++ ){
 		int row  = i + edit.row_offset ; 
 		if ( row > edit.row_length ){
@@ -1009,12 +1011,36 @@ char *query_data_recovery(){
     return buf ;
 }
 
+
+void popup_tables( int height , int width , char** tables ){
+	   WINDOW *popup = newwin(height + 2 , width + 2 , 0, 0);
+	   box(popup, 0, 0);
+	   for ( int i = 0 ; i < height ; i++ ){
+		mvwprintw(popup, i +1 ,  2 , "%s" , tables[i]);
+	   }
+	  	 wrefresh(popup);
+		wgetch(popup);
+	  	 delwin(popup);
+		refresh();
+}
+
 void meta_commnds(char *temp){
 	if ( strcmp(temp , ".save" )){
 		saving() ;
 	}
 	else if ( strcmp(temp , ".load")){
 
+	}
+	else if ( strcmp(temp , ".tables")){
+		char **tables = proper_data[0] ; 
+		int i = 0 ; 
+		int width = 0 ; 
+		for (  i = 0 ; tables[i] != NULL ; i++ ){
+			if ( strlen(tables[i]) > width){
+				width = strlen(tables[i]) ; 
+			}
+		}
+		popup_tables( i  , width ,tables ) ; 
 	}
 }
 
