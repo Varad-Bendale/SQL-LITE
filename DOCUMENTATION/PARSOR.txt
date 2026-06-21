@@ -1,0 +1,26 @@
+The next part in here is the parser see we posted some queries now what to do with it we need to properly stucture  it right so now the thing 
+we do is the very first thing to do is we right now just have the normal character floating out we make the strings of them and then store it 
+out so that we can figure out what to do next about it the same is need to be done for the data which we have present in the thing we keep it
+ make it as a grid so then like if we want to assign something we make it so this is tokenizer '
+So see one curcial info is I am making the whole backend for the csv files cause its relatively easier to work with
+So probably for the other files I might make a changer of it so yeah its like that 
+
+
+One issue which was extremely hurting my eyes was about the files we load those stuture dont look good in the a proper structure for the 
+thing the lined stuff is needed so yeah I the best thing is to get the data which we go and then scan in the entire column that if which of 
+the size is the highest and record that and then add that much of the spaces in the part now it looks easy but trust me it took entire day of 
+the efforts for doing it and the reason was I was trying to do like in 1 iteration itself like record the highest one and then add the 
+character thing for the spaces and then bring them to one line but then the issue was first we iterate thorugh our row by row so then the 
+thing kind of breaks number 2 the first one can be solved but getting to know where exactly to put the space is also a huge problem it always 
+gets curropted now matter what and then next one the data in the render is far more different than the one which we get in the grid so then 
+the problem is pretty common so then the best thing to do is just record all the highest size of all the terms and then record it in a array 
+and then make a string and then add all the spaces and the data which we have with us and then maker it for each of the row and then put the 
+string in the row's data and like that the thing gets updated it was just highly painful to make all those segmentation errors and bus errors
+ really were a problem .
+
+
+
+The next part is about the meta commands there are several meta commands like .help or .save or .load or more like those these are complete 
+different than the normal sql queries so we need to make them aligned here or make them separately 
+Okay we go on e by one then rthe first meta command is the tables once we do it we gt all the tables all the headers we see it so now as we 
+Excel so showing those was a problem I could ha ve added them to the status messege but its limited cant be shown fully and also I could have just highlighted the part but I got to know about a a popup window for the terminal a pop up window appears you can just just show the contents over there and then as soon as the key is pressed the window is closed so I am making use of it as it is not curropting any of the data as well of ours so yeah 
