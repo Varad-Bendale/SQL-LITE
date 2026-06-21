@@ -605,33 +605,69 @@ void insert_char( row_input *line ,  int pos ,  int c ){
 	edit.changes++ ; 
 }
 
-void excel_like(){
-	char ***temp = proper_data.data ; 
-	int len = 0  ; 
-	int counter = 0 ; 
-	for ( int i = 0 ; temp[i] != NULL  ; i++ ){
 
-		for ( int j = 0 ; j < edit.row_length ; j++ ){
-			if ( edit.ri[j].query == true){
-				continue ; 
-			}
-			if ( strlen(temp[i][j]) > len ){
-				len =  strlen(temp[i][j])  ; 
-			}
-		}
-		for ( int j = 0 ; j < edit.row_length ; j++){
-			if ( edit.ri[j].query == true){
-				continue ; 
-			}			
-			int ct = 0 ; 
-			while ( ct <= len - strlen(temp[i][j]) + 1  ){
-				insert_char(&edit.ri[j] , counter + strlen(temp[i][j]) , ' ') ; 
-				ct++ ; 
-			}
-		}
-		counter = len + 1  ; 
+
+
+
+void excel_like(){
+    char ***temp = proper_data.data ;
+	if ( temp == NULL ){
+		return ; 
+	}
+	int cols = 0 ; 
+	if ( temp[0] != NULL ){
+	for ( int i = 0 ; temp[0][i] != NULL ; i++ ){
+			cols++ ; 
+	}
 }
+	int *max_size = calloc(cols , sizeof(int)) ; 
+	for ( int i = 0 ; temp[i] != NULL ; i++ ){
+		for ( int j = 0 ; j < cols && temp[i][j] ; j++ ){
+				if ( strlen(temp[i][j]) > max_size[j] ){
+					max_size[j] = strlen(temp[i][j]) ; 
+				} 
+		}
+	}
+
+
+
+	for ( int i = 0 ; temp[i] != NULL ; i++ ){
+		int row  = i + edit.row_offset ; 
+		if ( row > edit.row_length ){
+			break ; 
+		}
+		int total = 0 ;
+		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
+			total += max_size[j] + 3 ;
+		}
+		char *buf = malloc( total + 1 ) ;
+		int m = 0 ; 
+		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
+			memcpy(&buf[m] , temp[i][j] , strlen(temp[i][j]) ) ; 
+			m = m + strlen(temp[i][j])  ; 
+			int leftout = max_size[j] - strlen(temp[i][j]) + 1 ; 
+			memset( &buf[m] , ' ' ,  leftout  ) ; 
+			m = m + leftout ; 
+			memset( &buf[m] , ',' ,  1  ) ; 
+			m = m + 1  ; 
+		}
+	        buf[m] = '\0' ;	
+			row_input * line = &edit.ri[i]  ; 
+			free(line->data) ; 
+			line->data = buf ; 
+			line->size = m  ; 
+			edit.changes++ ; 
+	}
+	free(max_size) ; 
+	for ( int j = 0 ; j < edit.row_length ; j++ ){
+        render_input(&edit.ri[j]) ;
+    }
+
 }
+
+
+
+
 
 void disable_raw_mode(){
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &edit.original) == -1){
@@ -868,11 +904,7 @@ int seperator_new(int c ){
 }
 
 char ***data_tokenizer(){
-	int size = 0 ; 
-	for ( int i = 0 ; i < edit.row_length ; i++ ){
-		size = size + edit.ri[i].size ; 
-	}
-	char*** data = malloc( size*(sizeof(edit)) ); 
+	char*** data = malloc( (edit.row_length + 1 ) *(sizeof(char**)) ); 
 	int data_pointer = 0 ;
 	int i = 0 ; 
 	while ( edit.ri[i].query == true){
@@ -883,7 +915,7 @@ char ***data_tokenizer(){
 		int j = 0  ; 
 		int m = 0 ; 
 		char* temp = edit.ri[i].data ; 
-		char** strings = malloc(edit.ri[i].size * sizeof(char*) ); 
+		char** strings = malloc((edit.ri[i].size + 2) * sizeof(char*) );
 		int len = edit.ri[i].size  ;
 		bool exc = false ; 
 		for ( int k = 0 ; k < len ; k++ ){
@@ -903,8 +935,10 @@ char ***data_tokenizer(){
 				continue ; 
 			}
 			else { 
+				if ( j < 299 ){
 				te[j] = temp[k] ; 
            		 j++ ; 
+				}
 			}
 		}
 		te[j] = '\0' ; 
@@ -917,6 +951,7 @@ char ***data_tokenizer(){
 		i++ ; 
 
 	}
+	data[data_pointer] = NULL; 
 	return data ; 
 }
 
@@ -927,7 +962,7 @@ int j = 0  ;
 int m = 0 ; 
 int len = strlen(buf) ; 
 char** temp = malloc(300 * sizeof( char* )); 
-char *te[300] ; 
+char te[300] ; 
 for ( int k = 0 ; k < len  ; k++ ){
 if (isspace(buf[k])  ) {
 			te[j] = '\0' ; 
@@ -1274,8 +1309,6 @@ void screen_ready(){
 	dynamic_buffer_append(&temp, "\x1b[?25l" , 6 ) ; 
 	dynamic_buffer_append(&temp, "\x1b[H" , 3) ; 
 	txt_print( &temp ) ; 
-	proper_data.data = data_tokenizer() ; 
-	excel_like() ; 
 	status_line(&temp) ; 
 	status_msg(&temp) ; 
         char buf[32] ; 
@@ -1359,6 +1392,8 @@ int main(int argc , char *argv[] ){
     starter() ;
     if (argc >= 2 ){ 
 	 text_in_input_buffer(argv[1]) ; 
+	 	proper_data.data = data_tokenizer() ; 
+	excel_like() ; 
 	} 
 	status_msg_input( "ctrl + w for saving the file | ctrl + q for quitting | ctrl + f for finding words ") ; 
     while(1) {
