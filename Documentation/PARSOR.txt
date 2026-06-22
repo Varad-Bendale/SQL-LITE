@@ -23,7 +23,17 @@ string in the row's data and like that the thing gets updated it was just highly
 The next part is about the meta commands there are several meta commands like .help or .save or .load or more like those these are complete 
 different than the normal sql queries so we need to make them aligned here or make them separately 
 Okay we go on e by one then rthe first meta command is the tables once we do it we gt all the tables all the headers we see it so now as we 
-Excel so showing those was a problem I could ha ve added them to the status messege but its limited cant be shown fully and also I could have just highlighted the part but I got to know about a a popup window for the terminal a pop up window appears you can just just show the contents over there and then as soon as the key is pressed the window is closed so I am making use of it as it is not curropting any of the data as well of ours so yeah 
+Excel so showing those was a problem I could ha ve added them to the status messege but its limited cant be shown fully and also I could have
+just highlighted the part but I got to know about a a popup window for the terminal a pop up window appears you can just just show the contents 
+over there and then as soon as the key is pressed the window is closed so I am making use of it as it is not curropting any of the data as well
+of ours so yeah 
 
 
-After the meta commands there comes the assignment stuff like for example A1 = =AA1 like these of A1 = 20 we can generate formulas out of it and then update our data from it so a simple version I took just take all the string and then check out one by one how the things are present in the string and then operate on it like first check the assigning rows and columns and then look for the goods of them and then also if only 1 = is there then its a direct assignment but if there are = = then there is a formula which is to be given to the thing and then that formula generated answer is been given then now also one thing is needed to be noted was if the size of the new assignment is more than the max size then entire thing needs to be reset and then again the entire of the structure is need to be made the excel like function is needed to be called but if the max size is not changing then there is kind of no need then just operating on the one line is enough of the work so a new function is made for the same purposes . 
+After the meta commands there comes the assignment stuff like for example A1 = =AA1 like these of A1 = 20 we can generate formulas out of it
+and then update our data from it so a simple version I took just take all the string and then check out one by one how the things are present 
+in the string and then operate on it like first check the assigning rows and columns and then look for the goods of them and then also if only
+1 = is there then its a direct assignment but if there are = = then there is a formula which is to be given to the thing and then that formula
+generated answer is been given then now also one thing is needed to be noted was if the size of the new assignment is more than the max size 
+then entire thing needs to be reset and then again the entire of the structure is need to be made the excel like function is needed to be
+called but if the max size is not changing then there is kind of no need then just operating on the one line is enough of the work so a new 
+function is made for the same purposes . 
