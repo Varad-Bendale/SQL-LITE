@@ -1026,12 +1026,180 @@ void meta_commnds(char *temp){
 	}
 }
 
+int *coods(char * temp ){
+	int i = 0 ; 
+		int first_num = 0 ; 
+		int second_num = 0 ; 
+		while ( !isidigit(buf[i])){
+			if ( isspace(buf[i]) ){
+				i++ ; 
+				continue ; 
+			}
+			else { 
+				first_num = first_num + buf[i] - 'A' ; 
+			}
+			i++ ; 
+		}
+		while(isdigit(buf[i])){
+			if ( isspace(buf[i]) ){
+				i++ ; 
+				continue ; 
+			}
+			else { 
+				second_num = second_num * 10 + buf[i] ; 
+			}
+			i++ ; 
+		}
+		int * ans[2] = {first_num , second_num} ; 
+		return ans
+}
+
+
+void arrange_data(int row){
+		if ( row > edit.row_length ){
+			break ; 
+		}
+		int total = 0 ;
+		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
+			total += max_size[j] + 3 ;
+		}
+		char *buf = malloc( total + 1 ) ;
+		int m = 0 ; 
+		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
+			memcpy(&buf[m] , temp[i][j] , strlen(temp[i][j]) ) ; 
+			m = m + strlen(temp[i][j])  ; 
+			int leftout = max_size[j] - strlen(temp[i][j]) + 1 ; 
+			memset( &buf[m] , ' ' ,  leftout  ) ; 
+			m = m + leftout ; 
+			memset( &buf[m] , ',' ,  1  ) ; 
+			m = m + 1  ; 
+		}
+	        buf[m] = '\0' ;	
+			row_input * line = &edit.ri[i+1]  ; 
+			free(line->data) ; 
+			line->data = buf ; 
+			line->size = m  ; 
+			edit.changes++ ; 
+
+}
+
+int instruction(int c ){
+	return  strchr("()+-/*&", c) != NULL ; 
+}
+
+
+
+void assign(char *buf ){
+	int i = 0 ; 
+	int formula = 0 ; 
+		char *temp[300] ; 
+		int m = 0 ; 
+		while( seperator(buf[i]) == false ){
+			temp[m] = buf[i] ; 
+			m++ ; 
+			i++ ; 
+		}
+		int *first = coods(temp) ; 
+		while(!isalnum(buf[i])){
+			if ( isspace(buf[i])  ){
+				i++ ; 
+				continue ; 
+			}
+			else {
+				if (  buf[i] == '=' ){
+					if ( formula > 0 ){
+						if ( isspace(buf[i-1])){
+							formula++ ; 
+						}
+						else { 
+							status_msg_input("the query is wrong ") ; 
+							break ; 
+						}
+
+					}
+
+				}
+				else { 
+					status_msg_input("the query is wrong ") ; 
+					break ; 
+				}
+			}
+		}
+		if ( formula > 2 ){
+			status_msg_input("the query is wrong ") ; 
+			break ; 
+		}
+
+		if ( formula == 1 ){
+			int n = i ; 
+			while( buf[n] != '\0' ){
+				n++ ; 
+			}
+			char * assign  ; 
+			assign = malloc(n-i) ; 
+			int quote = 0 ; 
+			n = 0 ; 
+			while( buf[i] != '\0' ){
+				if ( buf[i] == '"'){
+					if ( quote == 0 ){
+					quote = 1 ; 
+					}
+					else { 
+						quote = 0 ; 
+					}
+				}
+				else if ( isspace(buf[i])){
+					if(quote == 1 ){
+						assign[n] = buf[i] ; 
+					}
+				}
+				if (seperator_new(buf[i]) && quote == 1  ){
+					status_msg_input("the query is wrong ") ; 
+					return ; 
+				}
+				else { 
+					assign[n] = buf[i] ; 
+				}
+				
+				i++ ; 
+			}
+			proper_data.data[first[0]][first[1]]  = assign ; 
+			if ( col_max_sizes[first[0]] < n ){
+				col_max_sizes[first[0]] = n ; 
+				excel_like() ; 
+			}
+			else { 
+				arrange_data(first[1]) ; 
+			}
+		}
+		if ( found == 2 ){
+			
+		}	
+
+
+
+}
+
 void process_query(){
 	char **buf = proper_data.query ;
+	int query = 0 ; 
 	for ( int i = 0 ; buf[i] != NULL  ; i++ ){
 		if ( buf[i][0] == '.'){
 			meta_commnds(buf[i]) ; 
 		}
+		else { 
+			for ( int j  = 0 ; buf[i][j] != NULL ; j++ ){
+				if ( j == 0 ){
+					continue ; 
+				}
+				if ( query == 0 &&  isalpha(buf[i][j-1]) && isdigit(buf[i][j]) ){
+
+
+				}
+			}
+		}
+
+
 	}
 }
 
