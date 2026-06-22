@@ -12,13 +12,14 @@
 #include<sys/types.h>
 #include<time.h>
 #include <stdarg.h>
+#include <ncurses.h>
 #include <stdbool.h>
 #include <fcntl.h>
 #define ctrl(k) ((k) & 0x1f) 
 #define version "0.0.1"
 #define tab_spaces 8
 #define quit 1
-
+int highlight = 0 ; 
 typedef struct row_input{ 
 	int size ; 
 	char *data ; 
@@ -574,7 +575,8 @@ void text_in_input_buffer(char *file){
     if (!fp) {									
       die("fopen") ; 
     }
-	edit.row_length = 0 ;
+	edit.row_length = 0;
+	append_lines("", 0, 0); 	
     char *line  = NULL ; 
     size_t mem = 0  ; 
     ssize_t len  ; 
@@ -654,7 +656,7 @@ edit.col_max_sizes  = malloc(cols) ;
 			m = m + 1  ; 
 		}
 	        buf[m] = '\0' ;	
-			row_input * line = &edit.ri[i]  ; 
+			row_input * line = &edit.ri[i+1]  ; 
 			free(line->data) ; 
 			line->data = buf ; 
 			line->size = m  ; 
@@ -1012,35 +1014,15 @@ char *query_data_recovery(){
 }
 
 
-void popup_tables( int height , int width , char** tables ){
-	   WINDOW *popup = newwin(height + 2 , width + 2 , 0, 0);
-	   box(popup, 0, 0);
-	   for ( int i = 0 ; i < height ; i++ ){
-		mvwprintw(popup, i +1 ,  2 , "%s" , tables[i]);
-	   }
-	  	 wrefresh(popup);
-		wgetch(popup);
-	  	 delwin(popup);
-		refresh();
-}
+
+
 
 void meta_commnds(char *temp){
-	if ( strcmp(temp , ".save" )){
+	if ( strcmp( ".save"  , temp  ) == 0 ){
 		saving() ;
 	}
-	else if ( strcmp(temp , ".load")){
-
-	}
-	else if ( strcmp(temp , ".tables")){
-		char **tables = proper_data[0] ; 
-		int i = 0 ; 
-		int width = 0 ; 
-		for (  i = 0 ; tables[i] != NULL ; i++ ){
-			if ( strlen(tables[i]) > width){
-				width = strlen(tables[i]) ; 
-			}
-		}
-		popup_tables( i  , width ,tables ) ; 
+	else if ( strcmp( ".tables"  , temp ) == 0 ){
+		highlight = 1 ; 
 	}
 }
 
@@ -1076,13 +1058,14 @@ void process_raw_key_press(){
 	       exit(0)  ; 
               break ; 
 		case ctrl('e'): 
+		if ( edit.ri[edit.cursor_rows].query == true ){
 			for ( int i = edit.cursor_rows + 1 ; i < edit.row_length ; i++ ){
 				edit.ri[i].query = false ; 
 			}
 			edit.query_lines = edit.cursor_rows + 1 ; 
 			 edit.cursor_rows = edit.cursor_rows + 1  ;
 			 edit.cursor_cols = 0 ; 
-			status_msg_input("Thq query is under execution") ; 
+			status_msg_input("The query is under execution") ; 
 			 if (proper_data.query != NULL) {
 				free(proper_data.query);   
 				proper_data.query = NULL;
@@ -1093,6 +1076,11 @@ void process_raw_key_press(){
 			}
 			proper_data.query = tokenizer() ; 	
 			proper_data.data = data_tokenizer() ; 
+			process_query() ; 
+		}
+		else { 
+			edit.cursor_rows = 0 ; 
+		}
 			break ; 
 	  case ctrl('w'): 
 		saving() ; 
@@ -1258,7 +1246,6 @@ void txt_print(struct dynamic_buffer *temp  ){
 	char welcome[100] ; 
       for(int i = 0 ; i < edit.rows ; i++){
 		 int correct_row = i + edit.row_offset ; 
-
         if ( correct_row >= edit.row_length) {
 		if ( first == 0 ) { 
 		if ( i == edit.rows / 2 ) {
@@ -1298,7 +1285,12 @@ else {
 	}
 	if ( temp_len > 0 && edit.ri[correct_row].render != NULL && edit.ri[correct_row].hl != NULL ){
 		char *row = &edit.ri[correct_row].render[edit.col_offset] ; 
-		unsigned char *hl = &edit.ri[correct_row].hl[edit.col_offset] ;
+		unsigned char *hl = &edit.ri[correct_row].hl[edit.col_offset]  ; 
+			if ( highlight == 1 && correct_row == edit.query_lines ){
+		dynamic_buffer_append(temp, "\x1b[7;96m" , 7) ;  
+		dynamic_buffer_append(temp, row , temp_len) ; 
+	}
+	else { 
 		int prev_color = -1 ; 
 		for ( int j = 0 ; j < temp_len ; j++ ){ 
 		if (hl[j] == hl_normal) {
@@ -1318,7 +1310,9 @@ else {
 		}
 			dynamic_buffer_append(temp, &row[j] , 1) ;					
 		}				
-		} 
+		
+	}
+} 
 	}
 	dynamic_buffer_append(temp, "\x1b[m" , 3) ;
 }
