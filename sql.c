@@ -1084,12 +1084,63 @@ void arrange_data(int row){
 }
 
 int instruction(int c ){
-	return  strchr("()+-/*&", c) != NULL ; 
+	return  strchr("()+-/*", c) != NULL ; 
+}
+
+
+int seperator(int c ){
+	return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL ; 
 }
 
 
 
-void assign(char *buf ){
+
+bool commands(char *data){
+	if ( strcmp (data , SUM ) || strcmp (data , AVG ) || strcmp (data , COUNT ) || strcmp (data , MIN ) || strcmp (data , MAX )  ){
+		return true ; 
+	}
+return false ; 
+}
+
+
+float data_int(char* data){
+	int i = 0 ; 
+	float temo = 1 ; 
+	float number = 0 ; 
+	int decimal = 0 ; 
+
+	while(data[i] != '\0' && isdigit(data[i] )){
+		if ( data[i] == '.'){
+			decimal = 1 ; 
+			i++ ; 
+		}
+		if (decimal == 0 ){
+			number = number*10 + data[i] ; 
+			i++ ; 
+		}
+		else {
+			float use = temo ; 
+			float some = 1 ; 
+			while(use  > 0  ) {
+				some  = some + data[i]/10 ; 
+				use-- ; 
+			}
+			number = number + some ; 
+			temo++ ; 
+			i++ ; 
+		}
+	}
+	if ( isalpha(data[i])){
+		return nope ; 
+	}
+	return number ; 
+}
+
+
+
+
+
+void assign(char *buf ){ 
 	int i = 0 ; 
 	int formula = 0 ; 
 		char *temp[300] ; 
@@ -1173,7 +1224,102 @@ void assign(char *buf ){
 			}
 		}
 		if ( found == 2 ){
-			
+			int quote = 0 ; 
+			int num = 0 ; 
+			char **data ; 
+			float *integers ; 
+			int pointer = 0 ; 
+			int sep = 0  ; 
+			char *seperators[300] ; 
+
+			while ( buf[i] != '\0'){
+
+				if ( buf[i] == '\''){
+					if ( num  == 1 ){
+						status_msg_input("the query is wrong ") ; 
+						return ; 
+					}
+					i++ ; 
+					char *dat ; 
+					int m = i ; 
+					while ( buf[m] != '\''){
+						m++ ; 
+					}
+					dat = malloc(m-i) ;
+					m = 0 ;  
+					while ( buf[i] != '\''){
+						dat[m] = buf[i] ; 
+						i++ ; 
+						m++ ; 
+					}
+					dat[m] = '\0' ; 
+					data[pointer] = dat ; 
+					pointer++ ; 
+					i++ ; 
+				}
+
+				if ( isnum(buf[i]) ){
+					num = 1 ; 
+					int m = 0 ; 
+					char *num[300] ; 
+					if ( quote == 1 ){
+						status_msg_input("the query is wrong ") ; 
+						return ; 
+					}
+					while ( seperator_new(buf[i] != true )){
+						num[m] = buf[i] ; 
+						m++ ; 
+						i++ ; 
+					}
+					num[m] = '\0' ; 
+					float number = data_int ; 
+					if ( number == nope ){
+						status_msg_input("the query is wrong ") ; 
+						return ; 
+					}
+					integers[pointer] = number ; 
+					pointer++ ; 
+				}
+				if ( seperator(buf[i])){
+					seperator[sep] = buf[i] ; 
+					sep++ ; 
+					i++ ; 
+				}
+				else { 
+					char *dat[300] ;  
+					int m  = 0 ; 
+					int *coordinates ; 
+					while ( seperator(buf[i]) != true ){
+						dat[m] = buf[i] ; 
+						i++ ;
+						m++ ;  
+					}
+					dat[m] = '\0' ; 
+					if ( commands(dat) == false ){
+						coordinates = coods(dat) ;
+						char *grid_data = malloc(edit.col_max_sizes[coordinates[0]]) ; 
+						grid_data = proper_data.data[coordinates[0]][coordinates[1]] ; 
+						int check = data_int(grid_data)  ; 
+						if ( check != nope ){
+							quote = 1 ; 
+							data[pointer] = dat ; 
+							pointer++ ; 
+						}
+						else { 
+							num = 1 ; 
+							integers[pointer] = number ; 
+							pointer++ ; 
+						}
+					}
+					if ( commands(dat) == true ){
+						if ( quote == 1  ){
+							status_msg_input("the query is wrong ") ; 
+							return ; 
+						}
+
+					}
+				}
+			}
 		}	
 
 
