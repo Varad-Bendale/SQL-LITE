@@ -18,6 +18,7 @@
 #define ctrl(k) ((k) & 0x1f) 
 #define version "0.0.1"
 #define tab_spaces 8
+#define nope 100000.999999
 #define quit 1
 int highlight = 0 ; 
 typedef struct row_input{ 
@@ -1095,11 +1096,11 @@ int seperator(int c ){
 
 
 
-bool commands(char *data){
+char *commands(char *data){
 	if ( strcmp (data , SUM ) || strcmp (data , AVG ) || strcmp (data , COUNT ) || strcmp (data , MIN ) || strcmp (data , MAX )  ){
-		return true ; 
+		return data ; 
 	}
-return false ; 
+return NULL ; 
 }
 
 
@@ -1136,9 +1137,78 @@ float data_int(char* data){
 	return number ; 
 }
 
+float execute_commands(char* command , char* first  , char * second  ){
+	float ans = 0 ; 
+	float temp = 0 ; 
+	int *first_index[2] = coods(first) ; 
+	int *second_index[2] = coods(second) ; 
+	if ( first_index[0] != second_index[0]){
+		return nope ;
+	}
+	if ( strcmp (data , SUM ) ){
+	while (first_index[1] <= second_index[1]){
+		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		ans = ans + temp ; 
+		first_index[1]++ ; 
+	}
+	}
+	else if ( strcmp (data , AVG ) ){
+	int numbers = 0 ; 
+	while (first_index[1] <= second_index[1]){
+		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		ans = ans + temp ; 
+		first_index[1]++ ; 
+		numbers++ ; 
+	}
+	ans = ans / numbers ; 
+	}
+	else if ( strcmp (data , MIN ) ){
+	while (first_index[1] <= second_index[1]){
+		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		if ( temp < ans ){
+			ans = temp ; 
+		}
+		first_index[1]++ ; 
+	}
+	}
+	else if ( strcmp (data , MAX ) ){
+	while (first_index[1] <= second_index[1]){
+		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		if ( temp > ans ){
+			ans = temp ; 
+		}
+		first_index[1]++ ; 
+	}
+	}
+	else if ( strcmp (data , COUNT ) ){
+	while (first_index[1] <= second_index[1]){
+		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		if ( temp != nope ){
+			 ans = ans + 1  ; 
+		}
+		first_index[1]++ ; 
+	}
+	}
 
 
+return ans ; 
+}
 
+float * execute_prog_nums(char* seperator , float * numbers){
+
+}
 
 void assign(char *buf ){ 
 	int i = 0 ; 
@@ -1280,11 +1350,15 @@ void assign(char *buf ){
 					integers[pointer] = number ; 
 					pointer++ ; 
 				}
+
+
 				if ( seperator(buf[i])){
 					seperator[sep] = buf[i] ; 
 					sep++ ; 
 					i++ ; 
 				}
+
+
 				else { 
 					char *dat[300] ;  
 					int m  = 0 ; 
@@ -1295,7 +1369,8 @@ void assign(char *buf ){
 						m++ ;  
 					}
 					dat[m] = '\0' ; 
-					if ( commands(dat) == false ){
+
+					if ( commands(dat) == NULL ){
 						coordinates = coods(dat) ;
 						char *grid_data = malloc(edit.col_max_sizes[coordinates[0]]) ; 
 						grid_data = proper_data.data[coordinates[0]][coordinates[1]] ; 
@@ -1311,15 +1386,74 @@ void assign(char *buf ){
 							pointer++ ; 
 						}
 					}
-					if ( commands(dat) == true ){
+
+					else if ( commands(dat) != true ){
+						num = 1 ; 
 						if ( quote == 1  ){
 							status_msg_input("the query is wrong ") ; 
 							return ; 
 						}
-
+						char *first_index[300] ; 
+						int first = 0 ; 
+						int index = 0 ; 
+						char *second_index[300] ; 
+						while ( buf[i] != ')'){
+							if ( isspace(buf[i])){
+								i++ ; 
+								continue ; 
+							}
+							else if (buf[i] == '('){
+								i++ ; 
+								continue ; 
+							}
+							else if ( buf[i] == ':'){
+								i++ ; 
+								first = 1 ; 
+								index = 0 ; 
+							}
+							else { 
+								if ( first == 0 ){
+									first_index[index] = buf[i] ; 
+								}
+								else { 
+									second_index[index] = buf[i] ; 
+								}
+								i++ ; 
+							}
+						}
+						float number = execute_commands(commands(dat) , first_index , second_index ) ; 
+						if ( number == nope ){
+							status_msg_input("the query is wrong ") ; 
+							return ; 
+						}
+						integers[pointer ] = number ; 
+						pointer++ ; 
 					}
 				}
+
 			}
+			seperators[sep] = NULL ; 
+			sep++ ; 
+			if ( quote ){
+				for ( int l = 0 ;seperators[l] != NULL ; l++  ){
+					if (sepeator[l] != '&' && sepeator[l] != '(' && sepeator[l] != ')' ){
+						status_msg_input("the query is wrong ") ; 
+						return ; 
+					}
+				}
+				data[pointer] = NULL ; 
+				pointer++ ; 
+				execute_prog_words() ; 
+			}
+			else if ( num ){
+				integers[pointer] = NULL ; 
+				pointer++ ; 
+				execute_prog_nums() ; 
+			}
+
+
+
+
 		}	
 
 
