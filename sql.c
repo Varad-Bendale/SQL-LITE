@@ -12,13 +12,16 @@
 #include<sys/types.h>
 #include<time.h>
 #include <stdarg.h>
+#include <math.h>
+#include <ctype.h>
 #include <ncurses.h>
 #include <stdbool.h>
 #include <fcntl.h>
 #define ctrl(k) ((k) & 0x1f) 
 #define version "0.0.1"
 #define tab_spaces 8
-#define nope 100000.999999
+#define nope -1.0f
+#define MAX 1024 
 #define quit 1
 int highlight = 0 ; 
 typedef struct row_input{ 
@@ -1026,11 +1029,11 @@ void meta_commnds(char *temp){
 	}
 }
 
-int *coods(char * temp ){
+int *coods(char* buf ){
 	int i = 0 ; 
 		int first_num = 0 ; 
 		int second_num = 0 ; 
-		while ( !isidigit(buf[i])){
+		while ( !isdigit(buf[i])){
 			if ( isspace(buf[i]) ){
 				i++ ; 
 				continue ; 
@@ -1046,36 +1049,39 @@ int *coods(char * temp ){
 				continue ; 
 			}
 			else { 
-				second_num = second_num * 10 + buf[i] ; 
+				second_num = second_num * 10 +  buf[i] - '0' ; 
 			}
 			i++ ; 
 		}
-		int * ans[2] = {first_num , second_num} ; 
-		return ans
+		int *ans = malloc(2 * sizeof(int ));
+		ans[0] = first_num;
+		ans[1] = second_num;
+		return ans;
 }
 
 
 void arrange_data(int row){
 		if ( row > edit.row_length ){
-			break ; 
+			return  ; 
 		}
 		int total = 0 ;
-		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
-			total += max_size[j] + 3 ;
+		char ***temp =  proper_data.data ; 
+		for ( int j = 0 ; temp[row][j] != NULL ; j++ ){
+			total += edit.col_max_sizes[j] + 3 ;
 		}
 		char *buf = malloc( total + 1 ) ;
 		int m = 0 ; 
-		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
-			memcpy(&buf[m] , temp[i][j] , strlen(temp[i][j]) ) ; 
-			m = m + strlen(temp[i][j])  ; 
-			int leftout = max_size[j] - strlen(temp[i][j]) + 1 ; 
+		for ( int j = 0 ;  temp[row][j] != NULL ; j++ ){
+			memcpy(&buf[m] , temp[row][j] , strlen(temp[row][j]) ) ; 
+			m = m + strlen(temp[row][j])  ; 
+			int leftout = edit.col_max_sizes[j] - strlen(temp[row][j]) + 1 ; 
 			memset( &buf[m] , ' ' ,  leftout  ) ; 
 			m = m + leftout ; 
 			memset( &buf[m] , ',' ,  1  ) ; 
 			m = m + 1  ; 
 		}
 	        buf[m] = '\0' ;	
-			row_input * line = &edit.ri[i+1]  ; 
+			row_input * line = &edit.ri[row+1]  ; 
 			free(line->data) ; 
 			line->data = buf ; 
 			line->size = m  ; 
@@ -1085,15 +1091,12 @@ void arrange_data(int row){
 
 
 
-int seperator(int c ){
-	return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL ; 
-}
 
 
 
 
 char *commands(char *data){
-	if ( strcmp (data , SUM ) || strcmp (data , AVG ) || strcmp (data , COUNT ) || strcmp (data , MIN ) || strcmp (data , MAX )  ){
+	if ( strcmp (data ,"SUM" ) == 0  || strcmp (data , "AVG" ) == 0  || strcmp (data , "COUNT" ) == 0 || strcmp (data , "MIN" ) == 0  || strcmp (data , "MAX" ) == 0   ){
 		return data ; 
 	}
 return NULL ; 
@@ -1136,14 +1139,14 @@ float data_int(char* data){
 float execute_commands(char* command , char* first  , char * second  ){
 	float ans = 0 ; 
 	float temp = 0 ; 
-	int *first_index[2] = coods(first) ; 
-	int *second_index[2] = coods(second) ; 
+	int *first_index = coods(first) ; 
+	int *second_index = coods(second) ; 
 	if ( first_index[0] != second_index[0]){
 		return nope ;
 	}
-	if ( strcmp (data , SUM ) ){
+	if ( strcmp (command , "SUM" ) == 0  ){
 	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
 		if ( temp == nope ){
 			return nope   ; 
 		}
@@ -1151,10 +1154,10 @@ float execute_commands(char* command , char* first  , char * second  ){
 		first_index[1]++ ; 
 	}
 	}
-	else if ( strcmp (data , AVG ) ){
+	else if ( strcmp (command , "AVG" ) == 0 ){
 	int numbers = 0 ; 
 	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
 		if ( temp == nope ){
 			return nope   ; 
 		}
@@ -1164,9 +1167,9 @@ float execute_commands(char* command , char* first  , char * second  ){
 	}
 	ans = ans / numbers ; 
 	}
-	else if ( strcmp (data , MIN ) ){
+	else if ( strcmp (command , "MIN" ) == 0  ){
 	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
 		if ( temp == nope ){
 			return nope   ; 
 		}
@@ -1176,9 +1179,9 @@ float execute_commands(char* command , char* first  , char * second  ){
 		first_index[1]++ ; 
 	}
 	}
-	else if ( strcmp (data , MAX ) ){
+	else if ( strcmp (command , "MAX" ) == 0 ){
 	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
 		if ( temp == nope ){
 			return nope   ; 
 		}
@@ -1188,9 +1191,9 @@ float execute_commands(char* command , char* first  , char * second  ){
 		first_index[1]++ ; 
 	}
 	}
-	else if ( strcmp (data , COUNT ) ){
+	else if ( strcmp (command , "COUNT" ) == 0 ){
 	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data[first_index[0]][first_index[1]]) ; 
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
 		if ( temp != nope ){
 			 ans = ans + 1  ; 
 		}
@@ -1360,7 +1363,7 @@ float execute_prog_nums(char *separator , float *number ){
 }
 
 
-char *concat_all_data(char **data ){
+char *execute_prog_words(char **data ){
 
 	if ( data == NULL ){
 		return NULL ;
@@ -1392,7 +1395,7 @@ char *concat_all_data(char **data ){
 void assign(char *buf ){ 
 	int i = 0 ; 
 	int formula = 0 ; 
-		char *temp[300] ; 
+		char temp[300] ; 
 		int m = 0 ; 
 		while( seperator(buf[i]) == false ){
 			temp[m] = buf[i] ; 
@@ -1427,7 +1430,7 @@ void assign(char *buf ){
 		}
 		if ( formula > 2 ){
 			status_msg_input("the query is wrong ") ; 
-			break ; 
+			return ; 
 		}
 
 		if ( formula == 1 ){
@@ -1435,8 +1438,7 @@ void assign(char *buf ){
 			while( buf[n] != '\0' ){
 				n++ ; 
 			}
-			char * assign  ; 
-			assign = malloc(n-i) ; 
+			char *assign  = malloc(n-i+1) ; 
 			int quote = 0 ; 
 			n = 0 ; 
 			while( buf[i] != '\0' ){
@@ -1463,9 +1465,12 @@ void assign(char *buf ){
 				
 				i++ ; 
 			}
-			proper_data.data[first[0]][first[1]]  = assign ; 
-			if ( col_max_sizes[first[0]] < n ){
-				col_max_sizes[first[0]] = n ; 
+			if (proper_data.data[first[0]][first[1]] != NULL) {
+ 				   free(proper_data.data[first[0]][first[1]]);
+				}
+				proper_data.data[first[0]][first[1]] = strdup(assign);
+			if ( edit.col_max_sizes[first[0]] < n ){
+				edit.col_max_sizes[first[0]] = n ; 
 				excel_like() ; 
 			}
 			else { 
@@ -1474,14 +1479,14 @@ void assign(char *buf ){
 		}
 
 
-		if ( found == 2 ){
+		if ( formula == 2 ){
 			int quote = 0 ; 
 			int num = 0 ; 
-			char **data ; 
-			float *integers ; 
+			char **data = malloc(300 *edit.row_length* sizeof(char*)) ; 
+			float *integers  = malloc(300 *edit.row_length* sizeof(float*)); 
 			int pointer = 0 ; 
 			int sep = 0  ; 
-			char *seperators[300] ; 
+			char seperators[300] ; 
 			int n = 0  ; 
 			char size[50];
 
@@ -1510,11 +1515,11 @@ void assign(char *buf ){
 					pointer++ ; 
 					i++ ; 
 				}
-
-				if ( isnum(buf[i]) ){
+				float number = 0 ; 
+				if ( isdigit(buf[i]) ){
 					num = 1 ; 
 					int m = 0 ; 
-					char *num[300] ; 
+					char num[300] ; 
 					if ( quote == 1 ){
 						status_msg_input("the query is wrong ") ; 
 						return ; 
@@ -1525,7 +1530,7 @@ void assign(char *buf ){
 						i++ ; 
 					}
 					num[m] = '\0' ; 
-					float number = data_int ; 
+					 number = data_int(num) ; 
 					if ( number == nope ){
 						status_msg_input("the query is wrong ") ; 
 						return ; 
@@ -1536,14 +1541,14 @@ void assign(char *buf ){
 
 
 				if ( seperator(buf[i])){
-					seperator[sep] = buf[i] ; 
+					seperators[sep] = buf[i] ; 
 					sep++ ; 
 					i++ ; 
 				}
 
 
 				else { 
-					char *dat[300] ;  
+					char dat[300] ;  
 					int m  = 0 ; 
 					int *coordinates ; 
 					while ( seperator(buf[i]) != true ){
@@ -1570,16 +1575,16 @@ void assign(char *buf ){
 						}
 					}
 
-					else if ( commands(dat) != true ){
+					else if ( commands(dat) != NULL ){
 						num = 1 ; 
 						if ( quote == 1  ){
 							status_msg_input("the query is wrong ") ; 
 							return ; 
 						}
-						char *first_index[300] ; 
+						char first_index[300] ; 
 						int first = 0 ; 
 						int index = 0 ; 
-						char *second_index[300] ; 
+						char second_index[300] ; 
 						while ( buf[i] != ')'){
 							if ( isspace(buf[i])){
 								i++ ; 
@@ -1615,11 +1620,11 @@ void assign(char *buf ){
 				}
 
 			}
-			seperators[sep] = NULL ; 
+			seperators[sep] = '\0' ; 
 			sep++ ; 
 			if ( quote ){
-				for ( int l = 0 ;seperators[l] != NULL ; l++  ){
-					if (sepeator[l] != '&' && sepeator[l] != '(' && sepeator[l] != ')' ){
+				for ( int l = 0 ;seperators[l] != '\0' ; l++  ){
+					if (seperators[l] != '&' && seperators[l] != '(' && seperators[l] != ')' ){
 						status_msg_input("the query is wrong ") ; 
 						return ; 
 					}
@@ -1627,9 +1632,12 @@ void assign(char *buf ){
 				data[pointer] = NULL ; 
 				pointer++ ; 
 				char * ans = execute_prog_words( data ) ; 
-				proper_data.data[first[0]][first[1]]  = ans ; 
-				if ( col_max_sizes[first[0]] < strlen(ans) ){
-					col_max_sizes[first[0]] = strlen(ans) ; 
+				if (proper_data.data[first[0]][first[1]] != NULL) {
+ 				   free(proper_data.data[first[0]][first[1]]);
+				}
+				proper_data.data[first[0]][first[1]] = strdup(ans);
+				if ( edit.col_max_sizes[first[0]] < strlen(ans) ){
+					edit.col_max_sizes[first[0]] = strlen(ans) ; 
 					excel_like() ; 
 				}
 				else { 
@@ -1638,13 +1646,16 @@ void assign(char *buf ){
 			}
 
 			else if ( num ){
-				integers[pointer] = NULL ; 
+				integers[pointer] = nope ; 
 				pointer++ ; 
-				int as = execute_prog_nums(seperators , integers ) ; 
+				float as = execute_prog_nums(seperators , integers ) ; 
 				sprintf(size, "%.2f", as);
-				proper_data.data[first[0]][first[1]]  = size ; 
-				if ( col_max_sizes[first[0]] < strlen(size) ){
-					col_max_sizes[first[0]] = strlen(size) ; 
+				if (proper_data.data[first[0]][first[1]] != NULL) {
+ 				   free(proper_data.data[first[0]][first[1]]);
+				}
+				proper_data.data[first[0]][first[1]] = strdup(size);
+				if ( edit.col_max_sizes[first[0]] < strlen(size) ){
+					edit.col_max_sizes[first[0]] = strlen(size) ; 
 					excel_like() ; 
 				}
 				else { 
@@ -1666,7 +1677,7 @@ void process_query(){
 			meta_commnds(buf[i]) ; 
 		}
 		else { 
-			for ( int j  = 0 ; buf[i][j] != NULL ; j++ ){
+			for ( int j  = 0 ; buf[i][j] != '\0' ; j++ ){
 				if ( j == 0 ){
 					continue ; 
 				}
