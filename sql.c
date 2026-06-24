@@ -331,29 +331,29 @@ int seperator(int c ){
 
 char *SQLITE_HL_keywords[] = {
   "CREATE", "TABLE", "VIEW", "INDEX", "TRIGGER", "VIRTUAL", "DROP", "ALTER",
-"ADD", "COLUMN", "RENAME", "ATTACH", "DETACH", "DATABASE",
-"SELECT", "INSERT", "UPDATE", "DELETE", "REPLACE", "INTO", "VALUES", "SET",
-"FROM", "WHERE", "RETURNING", "UPSERT",
-"JOIN", "INNER", "LEFT", "RIGHT", "FULL", "OUTER", "CROSS", "NATURAL", "ON",
-"USING", "GROUP", "BY", "HAVING", "ORDER", "ASC", "DESC", "LIMIT", "OFFSET",
-"UNION", "INTERSECT", "EXCEPT", "ALL", "DISTINCT", "WITH", "RECURSIVE", "AS",
-"WINDOW", "OVER", "PARTITION", "ROWS", "RANGE", "GROUPS", "BETWEEN",
-"UNBOUNDED", "CURRENT", "ROW", "PRECEDING", "FOLLOWING",
-"PRIMARY", "KEY", "FOREIGN", "REFERENCES", "UNIQUE", "NOT", "NULL", "DEFAULT",
-"CHECK", "CONSTRAINT", "WITHOUT", "ROWID", "STRICT", "AUTOINCREMENT",
-"CONFLICT", "ROLLBACK", "ABORT", "FAIL", "IGNORE", "CASCADE", "RESTRICT",
-"NO", "ACTION", "DEFERRABLE", "DEFERRED", "INITIALLY", "IMMEDIATE",
-"BEGIN", "COMMIT", "END", "TRANSACTION", "SAVEPOINT", "RELEASE",
-"EXCLUSIVE", "CONCURRENT",
-"AND", "OR", "IN", "LIKE", "GLOB", "REGEXP", "MATCH", "IS", "ISNULL",
-"NOTNULL", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "CAST", "COLLATE",
-"RAISE", "INDEXED", "UNINDEXED",
-"PRAGMA", "VACUUM", "ANALYZE", "REINDEX", "EXPLAIN", "QUERY", "PLAN",
-"TEMP", "TEMPORARY", "IF", "EACH", "FOR", "OF", "NEW", "OLD",
-"BEFORE", "AFTER", "INSTEAD" , 
-"TRUE", "FALSE", "CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP",
-"INTEGER", "INT", "REAL", "TEXT", "BLOB", "NUMERIC", "BOOLEAN",
-"DATE", "DATETIME", "FLOAT", "DOUBLE", "CHAR", "VARCHAR", "CLOB", NULL 
+	"ADD", "COLUMN", "RENAME", "ATTACH", "DETACH", "DATABASE",
+	"SELECT", "INSERT", "UPDATE", "DELETE", "REPLACE", "INTO", "VALUES", "SET",
+	"FROM", "WHERE", "RETURNING", "UPSERT",
+	"JOIN", "INNER", "LEFT", "RIGHT", "FULL", "OUTER", "CROSS", "NATURAL", "ON",
+	"USING", "GROUP", "BY", "HAVING", "ORDER", "ASC", "DESC", "LIMIT", "OFFSET",
+	"UNION", "INTERSECT", "EXCEPT", "ALL", "DISTINCT", "WITH", "RECURSIVE", "AS",
+	"WINDOW", "OVER", "PARTITION", "ROWS", "RANGE", "GROUPS", "BETWEEN",
+	"UNBOUNDED", "CURRENT", "ROW", "PRECEDING", "FOLLOWING",
+	"PRIMARY", "KEY", "FOREIGN", "REFERENCES", "UNIQUE", "NOT", "NULL", "DEFAULT",
+	"CHECK", "CONSTRAINT", "WITHOUT", "ROWID", "STRICT", "AUTOINCREMENT",
+	"CONFLICT", "ROLLBACK", "ABORT", "FAIL", "IGNORE", "CASCADE", "RESTRICT",
+	"NO", "ACTION", "DEFERRABLE", "DEFERRED", "INITIALLY", "IMMEDIATE",
+	"BEGIN", "COMMIT", "END", "TRANSACTION", "SAVEPOINT", "RELEASE",
+	"EXCLUSIVE", "CONCURRENT",
+	"AND", "OR", "IN", "LIKE", "GLOB", "REGEXP", "MATCH", "IS", "ISNULL",
+	"NOTNULL", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "CAST", "COLLATE",
+	"RAISE", "INDEXED", "UNINDEXED",
+	"PRAGMA", "VACUUM", "ANALYZE", "REINDEX", "EXPLAIN", "QUERY", "PLAN",
+	"TEMP", "TEMPORARY", "IF", "EACH", "FOR", "OF", "NEW", "OLD",
+	"BEFORE", "AFTER", "INSTEAD" , 
+	"TRUE", "FALSE", "CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP",
+	"INTEGER", "INT", "REAL", "TEXT", "BLOB", "NUMERIC", "BOOLEAN",
+	"DATE", "DATETIME", "FLOAT", "DOUBLE", "CHAR", "VARCHAR", "CLOB", NULL 
 };
 
 char *C_HL_keywords[] = {
@@ -449,7 +449,6 @@ void color(row_input * row){
 	}
 		i++ ; 
 }
-
 	if ( buf != NULL ){
 	if ( if_syntax( buf )){ 
 		int mon = col ; 
@@ -625,8 +624,8 @@ void excel_like(){
 	for ( int i = 0 ; temp[0][i] != NULL ; i++ ){
 			cols++ ; 
 	}
-}
-edit.col_max_sizes  = malloc(cols) ; 
+	}
+	edit.col_max_sizes  = malloc(cols) ; 
 	int *max_size = calloc(cols , sizeof(int)) ; 
 	for ( int i = 0 ; temp[i] != NULL ; i++ ){
 		for ( int j = 0 ; j < cols && temp[i][j] ; j++ ){
@@ -963,38 +962,38 @@ char ***data_tokenizer(){
 
 char** tokenizer(){
 	char *buf  = query_data_recovery() ; 
-int j = 0  ; 
-int m = 0 ; 
-int len = strlen(buf) ; 
-char** temp = malloc(300 * sizeof( char* )); 
-char te[300] ; 
-for ( int k = 0 ; k < len  ; k++ ){
-if (isspace(buf[k])  ) {
-			te[j] = '\0' ; 
-            temp[m] = strdup(te) ; 
-            m++ ; 
-            j = 0 ;
-			    continue;  
-        }
-if ( seperator_new(buf[k])){
-			te[j] = '\0' ; 
-            temp[m] = strdup(te) ; 
-            m++ ; 
-            j = 0 ; 
-			char tem[2] = {buf[k] , '\0'} ; 
-            temp[m] = strdup(tem)  ; 
-            m++ ; 
-        }
-else { 
-            te[j] = buf[k] ; 
-            j++ ; 
-        }
-    }
-te[j] = '\0' ; 
-temp[m] = strdup(te)  ; 
-m++ ; 
-temp[m] = NULL ; 
-return temp ; 
+	int j = 0  ; 
+	int m = 0 ; 
+	int len = strlen(buf) ; 
+	char** temp = malloc(300 * sizeof( char* )); 
+	char te[300] ; 
+	for ( int k = 0 ; k < len  ; k++ ){
+	if (isspace(buf[k])  ) {
+				te[j] = '\0' ; 
+				temp[m] = strdup(te) ; 
+				m++ ; 
+				j = 0 ;
+					continue;  
+			}
+	if ( seperator_new(buf[k])){
+				te[j] = '\0' ; 
+				temp[m] = strdup(te) ; 
+				m++ ; 
+				j = 0 ; 
+				char tem[2] = {buf[k] , '\0'} ; 
+				temp[m] = strdup(tem)  ; 
+				m++ ; 
+			}
+	else { 
+				te[j] = buf[k] ; 
+				j++ ; 
+			}
+		}
+	te[j] = '\0' ; 
+	temp[m] = strdup(te)  ; 
+	m++ ; 
+	temp[m] = NULL ; 
+	return temp ; 
 }
 
 
@@ -1084,9 +1083,6 @@ void arrange_data(int row){
 
 }
 
-int instruction(int c ){
-	return  strchr("()+-/*", c) != NULL ; 
-}
 
 
 int seperator(int c ){
@@ -1206,9 +1202,192 @@ float execute_commands(char* command , char* first  , char * second  ){
 return ans ; 
 }
 
-float * execute_prog_nums(char* seperator , float * numbers){
 
+float execute_prog_nums(char *separator , float *number ){
+	float st[MAX] ;
+	char stack[MAX] ;
+	int st_top = -1 ;
+	int stack_top = -1 ;
+	int num_idx = 0 ;
+	int need_num = 1 ;
+	int len = strlen(separator) ;
+
+	for ( int i = 0 ; i < len ; i++ ){
+		char ch = separator[i] ;
+		if ( need_num && ch != '(' ){
+			st[++st_top] = number[num_idx++] ;
+			need_num = false ;
+		}
+
+		if ( ch == '(' ){
+			stack[++stack_top] = ch ;
+			need_num = true ;
+		}
+
+		else if ( ch == ')' ){
+
+			while ( stack_top != -1 && stack[stack_top] != '(' ){
+				float b = st[st_top--] ;
+				float a = st[st_top--] ;
+				char op = stack[stack_top--] ;
+				float ans = 0 ;
+
+				switch ( op ){
+					case '+' :
+						ans = a + b ;
+						break ;
+					case '-' :
+						ans = a - b ;
+						break ;
+					case '*' :
+						ans = a * b ;
+						break ;
+					case '/' :
+						ans = ( b != 0 ) ? a / b : 0 ;
+						break ;
+					case '%' :
+						ans = ( b != 0 ) ? fmod(a , b) : 0 ;
+						break ;
+					case '^' :
+						ans = pow(a , b) ;
+						break ;
+				}
+
+				st[++st_top] = ans ;
+			}
+
+			stack_top-- ;
+			need_num = false ;
+		}
+
+		else {
+
+			int cur ;
+
+			if ( ch == '*' || ch == '/' || ch == '%' || ch == '^' ){
+				cur = 2 ;
+			}
+			else {
+				cur = 1 ;
+			}
+
+			while ( stack_top != -1 && stack[stack_top] != '(' ){
+				char top = stack[stack_top] ;
+				int prev ;
+				if ( top == '*' || top == '/' || top == '%' || top == '^' ){
+					prev = 2 ;
+				}
+				else {
+					prev = 1 ;
+				}
+
+				if ( prev < cur ){
+					break ;
+				}
+
+				float b = st[st_top--] ;
+				float a = st[st_top--] ;
+				char op = stack[stack_top--] ;
+
+				float ans = 0 ;
+
+				switch ( op ){
+					case '+' :
+						ans = a + b ;
+						break ;
+					case '-' :
+						ans = a - b ;
+						break ;
+					case '*' :
+						ans = a * b ;
+						break ;
+					case '/' :
+						ans = ( b != 0 ) ? a / b : 0 ;
+						break ;
+					case '%' :
+						ans = ( b != 0 ) ? fmod(a , b) : 0 ;
+						break ;
+					case '^' :
+						ans = pow(a , b) ;
+						break ;
+				}
+
+				st[++st_top] = ans ;
+			}
+
+			stack[++stack_top] = ch ;
+			need_num = true ;
+		}
+	}
+
+	if ( need_num ){
+		st[++st_top] = number[num_idx++] ;
+	}
+
+	while ( stack_top != -1 ){
+
+		float b = st[st_top--] ;
+		float a = st[st_top--] ;
+		char op = stack[stack_top--] ;
+
+		float ans = 0 ;
+
+		switch ( op ){
+			case '+' :
+				ans = a + b ;
+				break ;
+			case '-' :
+				ans = a - b ;
+				break ;
+			case '*' :
+				ans = a * b ;
+				break ;
+			case '/' :
+				ans = ( b != 0 ) ? a / b : 0 ;
+				break ;
+			case '%' :
+				ans = ( b != 0 ) ? fmod(a , b) : 0 ;
+				break ;
+			case '^' :
+				ans = pow(a , b) ;
+				break ;
+		}
+
+		st[++st_top] = ans ;
+	}
+
+	return st[0] ;
 }
+
+
+char *concat_all_data(char **data ){
+
+	if ( data == NULL ){
+		return NULL ;
+	}
+	size_t total = 0 ;
+	for ( int i = 0 ; data[i] != NULL ; i++ ){
+		total += strlen(data[i]) ;
+	}
+
+	char *result = malloc(total + 1) ;
+
+	if ( result == NULL ){
+		return NULL ;
+	}
+
+	char *ptr = result ;
+	for ( int i = 0 ; data[i] != NULL ; i++ ){
+		int len = strlen(data[i]) ;
+		memcpy(ptr , data[i] , len) ;
+		ptr += len ;
+	}
+
+	*ptr = '\0' ;
+
+	return result ;
+}
+
 
 void assign(char *buf ){ 
 	int i = 0 ; 
@@ -1293,6 +1472,8 @@ void assign(char *buf ){
 				arrange_data(first[1]) ; 
 			}
 		}
+
+
 		if ( found == 2 ){
 			int quote = 0 ; 
 			int num = 0 ; 
@@ -1301,6 +1482,8 @@ void assign(char *buf ){
 			int pointer = 0 ; 
 			int sep = 0  ; 
 			char *seperators[300] ; 
+			int n = 0  ; 
+			char size[50];
 
 			while ( buf[i] != '\0'){
 
@@ -1443,16 +1626,31 @@ void assign(char *buf ){
 				}
 				data[pointer] = NULL ; 
 				pointer++ ; 
-				execute_prog_words() ; 
+				char * ans = execute_prog_words( data ) ; 
+				proper_data.data[first[0]][first[1]]  = ans ; 
+				if ( col_max_sizes[first[0]] < strlen(ans) ){
+					col_max_sizes[first[0]] = strlen(ans) ; 
+					excel_like() ; 
+				}
+				else { 
+					arrange_data(first[1]) ; 
+				}
 			}
+
 			else if ( num ){
 				integers[pointer] = NULL ; 
 				pointer++ ; 
-				execute_prog_nums() ; 
+				int as = execute_prog_nums(seperators , integers ) ; 
+				sprintf(size, "%.2f", as);
+				proper_data.data[first[0]][first[1]]  = size ; 
+				if ( col_max_sizes[first[0]] < strlen(size) ){
+					col_max_sizes[first[0]] = strlen(size) ; 
+					excel_like() ; 
+				}
+				else { 
+					arrange_data(first[1]) ; 
+				}
 			}
-
-
-
 
 		}	
 
@@ -1473,8 +1671,7 @@ void process_query(){
 					continue ; 
 				}
 				if ( query == 0 &&  isalpha(buf[i][j-1]) && isdigit(buf[i][j]) ){
-
-
+					assign(buf[i]) ; 
 				}
 			}
 		}
@@ -1720,53 +1917,53 @@ void txt_print(struct dynamic_buffer *temp  ){
               dynamic_buffer_append(temp, "~" , 1) ; 
 			} 
 		} 
-else { 
-	int temp_len = edit.ri[correct_row].render_size - edit.col_offset ; 
-	if (temp_len < 0) { 
-		temp_len = 0 ; 
-	} 
-	if (temp_len > edit.cols) { 
-		temp_len = edit.cols ; 
-	} 
-	if ( edit.ri[correct_row].query == true ){
-		dynamic_buffer_append(temp, "\x1b[7m" , 4) ;  
-	}
-	if ( temp_len > 0 && edit.ri[correct_row].render != NULL && edit.ri[correct_row].hl != NULL ){
-		char *row = &edit.ri[correct_row].render[edit.col_offset] ; 
-		unsigned char *hl = &edit.ri[correct_row].hl[edit.col_offset]  ; 
-			if ( highlight == 1 && correct_row == edit.query_lines ){
-		dynamic_buffer_append(temp, "\x1b[7;96m" , 7) ;  
-		dynamic_buffer_append(temp, row , temp_len) ; 
-	}
 	else { 
-		int prev_color = -1 ; 
-		for ( int j = 0 ; j < temp_len ; j++ ){ 
-		if (hl[j] == hl_normal) {
-		if ( prev_color != -1 ){ 
-			dynamic_buffer_append(temp, "\x1b[39m" , 5) ; 
-			prev_color = -1 ; 
+		int temp_len = edit.ri[correct_row].render_size - edit.col_offset ; 
+		if (temp_len < 0) { 
+			temp_len = 0 ; 
 		} 
-			dynamic_buffer_append(temp, &row[j] , 1) ; 
+		if (temp_len > edit.cols) { 
+			temp_len = edit.cols ; 
+		} 
+		if ( edit.ri[correct_row].query == true ){
+			dynamic_buffer_append(temp, "\x1b[7m" , 4) ;  
+		}
+		if ( temp_len > 0 && edit.ri[correct_row].render != NULL && edit.ri[correct_row].hl != NULL ){
+			char *row = &edit.ri[correct_row].render[edit.col_offset] ; 
+			unsigned char *hl = &edit.ri[correct_row].hl[edit.col_offset]  ; 
+				if ( highlight == 1 && correct_row == edit.query_lines ){
+			dynamic_buffer_append(temp, "\x1b[7;96m" , 7) ;  
+			dynamic_buffer_append(temp, row , temp_len) ; 
 		}
 		else { 
-		int col = decide_color(hl[j]) ; 
-		if ( prev_color != col ){
-			char buf[100] ;  
-			int len = snprintf(buf , sizeof(buf) , "\x1b[%dm" , col) ; 
-			dynamic_buffer_append(temp, buf , len) ; 
-			prev_color = col ; 
+			int prev_color = -1 ; 
+			for ( int j = 0 ; j < temp_len ; j++ ){ 
+			if (hl[j] == hl_normal) {
+			if ( prev_color != -1 ){ 
+				dynamic_buffer_append(temp, "\x1b[39m" , 5) ; 
+				prev_color = -1 ; 
+			} 
+				dynamic_buffer_append(temp, &row[j] , 1) ; 
+			}
+			else { 
+			int col = decide_color(hl[j]) ; 
+			if ( prev_color != col ){
+				char buf[100] ;  
+				int len = snprintf(buf , sizeof(buf) , "\x1b[%dm" , col) ; 
+				dynamic_buffer_append(temp, buf , len) ; 
+				prev_color = col ; 
+			}
+				dynamic_buffer_append(temp, &row[j] , 1) ;					
+			}				
+			
 		}
-			dynamic_buffer_append(temp, &row[j] , 1) ;					
-		}				
-		
+	} 
+		}
+		dynamic_buffer_append(temp, "\x1b[m" , 3) ;
 	}
-} 
+	dynamic_buffer_append(temp, "\x1b[K" , 3) ; 
+	dynamic_buffer_append(temp, "\r\n", 2) ;
 	}
-	dynamic_buffer_append(temp, "\x1b[m" , 3) ;
-}
-dynamic_buffer_append(temp, "\x1b[K" , 3) ; 
-dynamic_buffer_append(temp, "\r\n", 2) ;
-}
 }
 
 
