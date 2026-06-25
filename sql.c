@@ -326,7 +326,7 @@ void free_dynamic_buffer ( struct dynamic_buffer *temp){
 }
 
 int seperator(int c ){
-	return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL ; 
+	return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];&", c) != NULL ; 
 }
 
 
@@ -613,7 +613,6 @@ void insert_char( row_input *line ,  int pos ,  int c ){
 
 
 
-
 void excel_like(){
     char ***temp = proper_data.data ;
 	edit.col_max_sizes = NULL ; 
@@ -624,7 +623,7 @@ void excel_like(){
 	}
 	int cols = 0 ; 
 	if ( temp[0] != NULL ){
-	for ( int i = 0 ; temp[0][i] != NULL ; i++ ){
+	for ( int i = 0 ; temp[0][i] != NULL  && temp[0][i][0] != '\0' ; i++ ){
 			cols++ ; 
 	}
 	}
@@ -644,12 +643,12 @@ void excel_like(){
 			break ; 
 		}
 		int total = 0 ;
-		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
+		for ( int j = 0 ; j < cols && temp[i][j] != NULL && temp[i][j][0] != '\0' ; j++ ){
 			total += max_size[j] + 3 ;
 		}
 		char *buf = malloc( total + 1 ) ;
 		int m = 0 ; 
-		for ( int j = 0 ; j < cols && temp[i][j] != NULL ; j++ ){
+		for ( int j = 0 ; j < cols && temp[i][j] != NULL && temp[i][j][0] != '\0' ; j++ ){
 			memcpy(&buf[m] , temp[i][j] , strlen(temp[i][j]) ) ; 
 			m = m + strlen(temp[i][j])  ; 
 			int leftout = max_size[j] - strlen(temp[i][j]) + 1 ; 
@@ -671,8 +670,6 @@ void excel_like(){
     }
 
 }
-
-
 
 
 
@@ -949,6 +946,10 @@ char ***data_tokenizer(){
 			}
 		}
 		te[j] = '\0' ; 
+		while ( j > 0 && isspace((unsigned char)te[j-1]) ){
+			j-- ;
+			te[j] = '\0' ;
+		}
 		strings[m] = strdup(te) ; 
 		m++ ; 
 		strings[m] = NULL ; 
@@ -1029,64 +1030,35 @@ void meta_commnds(char *temp){
 	}
 }
 
-int *coods(char* buf ){
-	int i = 0 ; 
-		int first_num = 0 ; 
-		int second_num = 0 ; 
-		while ( !isdigit(buf[i])){
-			if ( isspace(buf[i]) ){
-				i++ ; 
-				continue ; 
-			}
-			else { 
-				first_num = first_num + buf[i] - 'A' ; 
-			}
-			i++ ; 
-		}
-		while(isdigit(buf[i])){
-			if ( isspace(buf[i]) ){
-				i++ ; 
-				continue ; 
-			}
-			else { 
-				second_num = second_num * 10 +  buf[i] - '0' ; 
-			}
-			i++ ; 
-		}
-		int *ans = malloc(2 * sizeof(int ));
-		ans[0] = first_num;
-		ans[1] = second_num;
-		return ans;
-}
 
 
 void arrange_data(int row){
-		if ( row > edit.row_length ){
-			return  ; 
-		}
-		int total = 0 ;
-		char ***temp =  proper_data.data ; 
-		for ( int j = 0 ; temp[row][j] != NULL ; j++ ){
-			total += edit.col_max_sizes[j] + 3 ;
-		}
-		char *buf = malloc( total + 1 ) ;
-		int m = 0 ; 
-		for ( int j = 0 ;  temp[row][j] != NULL ; j++ ){
-			memcpy(&buf[m] , temp[row][j] , strlen(temp[row][j]) ) ; 
-			m = m + strlen(temp[row][j])  ; 
-			int leftout = edit.col_max_sizes[j] - strlen(temp[row][j]) + 1 ; 
-			memset( &buf[m] , ' ' ,  leftout  ) ; 
-			m = m + leftout ; 
-			memset( &buf[m] , ',' ,  1  ) ; 
-			m = m + 1  ; 
-		}
-	        buf[m] = '\0' ;	
-			row_input * line = &edit.ri[row+1]  ; 
-			free(line->data) ; 
-			line->data = buf ; 
-			line->size = m  ; 
-			edit.changes++ ; 
-
+    int total = 0 ;
+    if ( row > edit.row_length ){
+        return ;
+    }
+    char ***temp = proper_data.data ;
+    for ( int j = 0 ; temp[row][j] != NULL && temp[row][j][0] != '\0' ; j++ ){
+        total += edit.col_max_sizes[j] + 3 ;
+    }
+    char *buf = malloc( total + 1 ) ;
+    int m = 0 ;
+    for ( int j = 0 ; temp[row][j] != NULL && temp[row][j][0] != '\0' ; j++ ){
+        memcpy(&buf[m] , temp[row][j] , strlen(temp[row][j]) ) ;
+        m = m + strlen(temp[row][j]) ;
+        int leftout = edit.col_max_sizes[j] - strlen(temp[row][j]) + 1 ;
+        memset( &buf[m] , ' ' , leftout ) ;
+        m = m + leftout ;
+        memset( &buf[m] , ',' , 1 ) ;
+        m = m + 1 ;
+    }
+    buf[m] = '\0' ;
+    row_input * line = &edit.ri[row+1] ;
+    free(line->data) ;
+    line->data = buf ;
+    line->size = m ;
+    edit.changes++ ;
+    render_input(line) ;  // re-render after updating
 }
 
 
@@ -1095,115 +1067,7 @@ void arrange_data(int row){
 
 
 
-char *commands(char *data){
-	if ( strcmp (data ,"SUM" ) == 0  || strcmp (data , "AVG" ) == 0  || strcmp (data , "COUNT" ) == 0 || strcmp (data , "MIN" ) == 0  || strcmp (data , "MAX" ) == 0   ){
-		return data ; 
-	}
-return NULL ; 
-}
 
-
-float data_int(char* data){
-	int i = 0 ; 
-	float temo = 1 ; 
-	float number = 0 ; 
-	int decimal = 0 ; 
-
-	while(data[i] != '\0' && isdigit(data[i] )){
-		if ( data[i] == '.'){
-			decimal = 1 ; 
-			i++ ; 
-		}
-		if (decimal == 0 ){
-			number = number*10 + data[i] ; 
-			i++ ; 
-		}
-		else {
-			float use = temo ; 
-			float some = 1 ; 
-			while(use  > 0  ) {
-				some  = some + data[i]/10 ; 
-				use-- ; 
-			}
-			number = number + some ; 
-			temo++ ; 
-			i++ ; 
-		}
-	}
-	if ( isalpha(data[i])){
-		return nope ; 
-	}
-	return number ; 
-}
-
-float execute_commands(char* command , char* first  , char * second  ){
-	float ans = 0 ; 
-	float temp = 0 ; 
-	int *first_index = coods(first) ; 
-	int *second_index = coods(second) ; 
-	if ( first_index[0] != second_index[0]){
-		return nope ;
-	}
-	if ( strcmp (command , "SUM" ) == 0  ){
-	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
-		if ( temp == nope ){
-			return nope   ; 
-		}
-		ans = ans + temp ; 
-		first_index[1]++ ; 
-	}
-	}
-	else if ( strcmp (command , "AVG" ) == 0 ){
-	int numbers = 0 ; 
-	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
-		if ( temp == nope ){
-			return nope   ; 
-		}
-		ans = ans + temp ; 
-		first_index[1]++ ; 
-		numbers++ ; 
-	}
-	ans = ans / numbers ; 
-	}
-	else if ( strcmp (command , "MIN" ) == 0  ){
-	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
-		if ( temp == nope ){
-			return nope   ; 
-		}
-		if ( temp < ans ){
-			ans = temp ; 
-		}
-		first_index[1]++ ; 
-	}
-	}
-	else if ( strcmp (command , "MAX" ) == 0 ){
-	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
-		if ( temp == nope ){
-			return nope   ; 
-		}
-		if ( temp > ans ){
-			ans = temp ; 
-		}
-		first_index[1]++ ; 
-	}
-	}
-	else if ( strcmp (command , "COUNT" ) == 0 ){
-	while (first_index[1] <= second_index[1]){
-		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
-		if ( temp != nope ){
-			 ans = ans + 1  ; 
-		}
-		first_index[1]++ ; 
-	}
-	}
-
-
-return ans ; 
-}
 
 
 float execute_prog_nums(char *separator , float *number ){
@@ -1363,76 +1227,251 @@ float execute_prog_nums(char *separator , float *number ){
 }
 
 
-char *execute_prog_words(char **data ){
+char *execute_prog_words(char **data) {
+    if (data == NULL) {
+        return NULL;
+    }
 
-	if ( data == NULL ){
-		return NULL ;
+    size_t total = 0;
+
+    for (int i = 0; data[i] != NULL; i++) {
+        int len = strlen(data[i]);
+        while (len > 0 && data[i][len - 1] == ' ') {
+            len--;
+        }
+        total = total +  len;
+    }
+
+    char *result = malloc(total + 1);
+    if (result == NULL) {
+        return NULL;
+    }
+
+    char *ptr = result;
+    for (int i = 0; data[i] != NULL; i++) {
+        int len = strlen(data[i]);
+        while (len > 0 && data[i][len - 1] == ' '){
+           len--;
+        }
+        memcpy(ptr, data[i], len);
+        ptr = ptr +  len;
+    }
+    *ptr = '\0';
+
+    return result;
+}
+
+
+
+int seperator_equal(int c ){
+	return  c == '\0' || strchr(",()+-/*.~%<>[];", c) != NULL ; 
+}
+
+
+
+
+int *coods(char* buf ){
+	int i = 0 ; 
+		int first_num = 0 ; 
+		int second_num = 0 ; 
+		while ( buf[i] != '\0' && !isdigit(buf[i])){
+			if ( isspace(buf[i]) ){
+				i++ ; 
+				continue ; 
+			}
+			else { 
+				first_num = first_num *26 + buf[i] - 'A' ; 
+			}
+			i++ ; 
+		}
+		while(isbuf[i] != '\0' && digit(buf[i])){
+			if ( isspace(buf[i]) ){
+				i++ ; 
+				continue ; 
+			}
+			else { 
+				second_num = second_num * 10 +  buf[i] - '0' ; 
+			}
+			i++ ; 
+		}
+		int *ans = malloc(2 * sizeof(int ));
+		if ( second_num == 0 ){           
+        ans[0] = -1 ;
+        ans[1] = -1 ;
+   	    }
+		else { 
+		ans[0] = second_num - 1 ;
+		ans[1] = first_num ;
+		}
+		return ans;
+}
+
+
+
+
+
+char *commands(char *data){
+	if ( strcmp (data ,"SUM" ) == 0  || strcmp (data , "AVG" ) == 0  || strcmp (data , "COUNT" ) == 0 || strcmp (data , "MIN" ) == 0  || strcmp (data , "MAX" ) == 0   ){
+		return data ; 
 	}
-	size_t total = 0 ;
-	for ( int i = 0 ; data[i] != NULL ; i++ ){
-		total += strlen(data[i]) ;
+return NULL ; 
+}
+
+
+
+
+
+
+float data_int(char* data){
+	int i = 0 ; 
+	float number = 0 ; 
+
+	while(data[i] != '\0' && isdigit(data[i] )){
+			number = number*10 + (data[i] - '0') ; 
+			i++ ; 
 	}
 
-	char *result = malloc(total + 1) ;
-
-	if ( result == NULL ){
-		return NULL ;
+	if ( data[i] == '.'){
+		i++ ; 
+		float factor = 0.1f;
+        while (data[i] != '\0' && isdigit(data[i])) {
+            number = number +  (data[i] - '0') * factor;
+            factor = factor *  0.1f;
+            i++ ;
+        }
 	}
 
-	char *ptr = result ;
-	for ( int i = 0 ; data[i] != NULL ; i++ ){
-		int len = strlen(data[i]) ;
-		memcpy(ptr , data[i] , len) ;
-		ptr += len ;
+	if ( data[i] != '\0' ){
+		return nope ; 
+	}
+	return number ; 
+}
+
+
+
+float execute_commands(char* command , char* first  , char * second  ){
+	float ans = 0 ; 
+	float temp = 0 ; 
+	int *first_index = coods(first) ; 
+	int *second_index = coods(second) ; 
+	if ( first_index[1] != second_index[1]){
+		return nope ;
+	}
+	if ( strcmp (command , "SUM" ) == 0  ){
+	while (first_index[0] <= second_index[0]){
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		ans = ans + temp ; 
+		first_index[0]++ ; 
+	}
+	}
+	else if ( strcmp (command , "AVG" ) == 0 ){
+	int numbers = 0 ; 
+	while (first_index[0] <= second_index[0]){
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		ans = ans + temp ; 
+		first_index[0]++ ; 
+		numbers++ ; 
+	}
+	ans = ans / numbers ; 
+	}
+	else if ( strcmp (command , "MIN" ) == 0  ){
+	while (first_index[0] <= second_index[0]){
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		if ( temp < ans ){
+			ans = temp ; 
+		}
+		first_index[0]++ ; 
+	}
+	}
+	else if ( strcmp (command , "MAX" ) == 0 ){
+	while (first_index[0] <= second_index[0]){
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
+		if ( temp == nope ){
+			return nope   ; 
+		}
+		if ( temp > ans ){
+			ans = temp ; 
+		}
+		first_index[0]++ ; 
+	}
+	}
+	else if ( strcmp (command , "COUNT" ) == 0 ){
+	while (first_index[0] <= second_index[0]){
+		temp = data_int(proper_data.data[first_index[0]][first_index[1]]) ; 
+		if ( temp != nope ){
+			 ans = ans + 1  ; 
+		}
+		first_index[0]++ ; 
+	}
 	}
 
-	*ptr = '\0' ;
 
-	return result ;
+return ans ; 
 }
 
 
 void assign(char *buf ){ 
+	if ( buf == NULL ){
+		return  ; 
+	}
+	int valid = 0 ; 
 	int i = 0 ; 
-	int formula = 0 ; 
+
+	for (  i = 0 ; buf[i] != NULL ; i++  ){
+		if ( isalnum(buf[i]) || seperator(buf[i]) != NULL ){
+			valid = 1 ; 
+			break ; 
+		}
+		else { 
+			i++ ; 
+		}
+	}
+	if ( valid == 0 ){
+		return ; 
+	}
+
+		int i = 0 ; 
+		int formula = 0 ; 
 		char temp[300] ; 
 		int m = 0 ; 
+
+
 		while( seperator(buf[i]) == false ){
 			temp[m] = buf[i] ; 
 			m++ ; 
 			i++ ; 
 		}
+		temp[m] = '\0' ; 
 		int *first = coods(temp) ; 
-		while(!isalnum(buf[i])){
-			if ( isspace(buf[i])  ){
-				i++ ; 
-				continue ; 
-			}
-			else {
+
+
+
+
+		while( buf[i] != '\0' && ( isspace(buf[i]) || buf[i] == '=') ){
 				if (  buf[i] == '=' ){
-					if ( formula > 0 ){
-						if ( isspace(buf[i-1])){
-							formula++ ; 
-						}
-						else { 
-							status_msg_input("the query is wrong ") ; 
-							break ; 
-						}
-
-					}
-
+					formula++ ; 
 				}
-				else { 
-					status_msg_input("the query is wrong ") ; 
-					break ; 
-				}
-			}
+				  i++ ; 
 		}
-		if ( formula > 2 ){
+
+		if ( formula > 2 || formula == 0 ){
 			status_msg_input("the query is wrong ") ; 
 			return ; 
 		}
 
+
+		while ( isspace(buf[i])){
+			i++ ; 
+		}
 		if ( formula == 1 ){
 			int n = i ; 
 			while( buf[n] != '\0' ){
@@ -1449,25 +1488,32 @@ void assign(char *buf ){
 					else { 
 						quote = 0 ; 
 					}
+					i++ ; 
+					continue ; 
 				}
 				else if ( isspace(buf[i])){
 					if(quote == 1 ){
 						assign[n] = buf[i] ; 
+						n++ ; 
 					}
+					i++ ; 
+					continue ; 
 				}
-				if (seperator_new(buf[i]) && quote == 1  ){
+
+				else if (seperator_new(buf[i]) && quote == 0  ){
 					status_msg_input("the query is wrong ") ; 
 					return ; 
 				}
 				else { 
 					assign[n] = buf[i] ; 
+					n++ ; 
 				}
 				
 				i++ ; 
 			}
-			if (proper_data.data[first[0]][first[1]] != NULL) {
- 				   free(proper_data.data[first[0]][first[1]]);
-				}
+			assign[n] = '\0' ; 
+
+
 				proper_data.data[first[0]][first[1]] = strdup(assign);
 			if ( edit.col_max_sizes[first[0]] < n ){
 				edit.col_max_sizes[first[0]] = n ; 
@@ -1483,29 +1529,32 @@ void assign(char *buf ){
 			int quote = 0 ; 
 			int num = 0 ; 
 			char **data = malloc(300 *edit.row_length* sizeof(char*)) ; 
-			float *integers  = malloc(300 *edit.row_length* sizeof(float*)); 
+			float *integers  = malloc(300 *edit.row_length* sizeof(float)); 
 			int pointer = 0 ; 
+			int num_pointer = 0 ; 
 			int sep = 0  ; 
 			char seperators[300] ; 
 			int n = 0  ; 
 			char size[50];
 
 			while ( buf[i] != '\0'){
-
+				if ( isspace(buf[i])){
+					i++ ; 
+					continue ; 
+				}
 				if ( buf[i] == '\''){
 					if ( num  == 1 ){
 						status_msg_input("the query is wrong ") ; 
 						return ; 
 					}
 					i++ ; 
-					char *dat ; 
 					int m = i ; 
-					while ( buf[m] != '\''){
+					while ( buf[m] != '\''  && buf[m] != '\0' ){
 						m++ ; 
 					}
-					dat = malloc(m-i) ;
+					char *dat  = malloc(m-i+1 ) ;
 					m = 0 ;  
-					while ( buf[i] != '\''){
+					while ( buf[i] != '\'' && buf[m] != '\0' ){
 						dat[m] = buf[i] ; 
 						i++ ; 
 						m++ ; 
@@ -1513,45 +1562,50 @@ void assign(char *buf ){
 					dat[m] = '\0' ; 
 					data[pointer] = dat ; 
 					pointer++ ; 
+					if (buf[i] == '\''){
 					i++ ; 
+					}
+
 				}
-				float number = 0 ; 
-				if ( isdigit(buf[i]) ){
+
+
+
+				else if ( isdigit(buf[i]) ){
 					num = 1 ; 
 					int m = 0 ; 
-					char num[300] ; 
+					char nume[300] ; 
 					if ( quote == 1 ){
 						status_msg_input("the query is wrong ") ; 
 						return ; 
 					}
-					while ( seperator_new(buf[i] != true )){
-						num[m] = buf[i] ; 
+					while ( !seperator_new(buf[i] )){
+						nume[m] = buf[i] ; 
 						m++ ; 
 						i++ ; 
 					}
-					num[m] = '\0' ; 
-					 number = data_int(num) ; 
+					nume[m] = '\0' ; 
+					float number = data_int(nume) ; 
 					if ( number == nope ){
 						status_msg_input("the query is wrong ") ; 
 						return ; 
 					}
-					integers[pointer] = number ; 
+					integers[num_pointer] = number ; 
+					num_pointer++ ; 
+					data[pointer] = strdup(nume) ; 
 					pointer++ ; 
 				}
 
-
-				if ( seperator(buf[i])){
+				else if ( seperator(buf[i])){
 					seperators[sep] = buf[i] ; 
 					sep++ ; 
 					i++ ; 
 				}
 
-
 				else { 
 					char dat[300] ;  
 					int m  = 0 ; 
 					int *coordinates ; 
-					while ( seperator(buf[i]) != true ){
+					while ( !seperator(buf[i])  ){
 						dat[m] = buf[i] ; 
 						i++ ;
 						m++ ;  
@@ -1559,23 +1613,25 @@ void assign(char *buf ){
 					dat[m] = '\0' ; 
 
 					if ( commands(dat) == NULL ){
-						coordinates = coods(dat) ;
-						char *grid_data = malloc(edit.col_max_sizes[coordinates[0]]) ; 
-						grid_data = proper_data.data[coordinates[0]][coordinates[1]] ; 
+						int *coordinates  = coods(dat) ;
+						char* grid_data = proper_data.data[coordinates[0]][coordinates[1]] ; 
 						int check = data_int(grid_data)  ; 
-						if ( check != nope ){
+						if ( check == nope ){
 							quote = 1 ; 
-							data[pointer] = dat ; 
+							data[pointer] = strdup(grid_data) ; 
 							pointer++ ; 
 						}
 						else { 
 							num = 1 ; 
-							integers[pointer] = number ; 
+							integers[num_pointer] = number ; 
+							num_pointer++ ; 
+							data[pointer] = strdup(grid_data) ; 
 							pointer++ ; 
 						}
+						free(coordinates) ; 
 					}
 
-					else if ( commands(dat) != NULL ){
+					else {
 						num = 1 ; 
 						if ( quote == 1  ){
 							status_msg_input("the query is wrong ") ; 
@@ -1583,9 +1639,10 @@ void assign(char *buf ){
 						}
 						char first_index[300] ; 
 						int first = 0 ; 
-						int index = 0 ; 
+						int first_index = 0 ; 
+						int second_index = 0 ; 
 						char second_index[300] ; 
-						while ( buf[i] != ')'){
+						while ( buf[i] != ')' && buf[i] != '\0'){
 							if ( isspace(buf[i])){
 								i++ ; 
 								continue ; 
@@ -1597,31 +1654,42 @@ void assign(char *buf ){
 							else if ( buf[i] == ':'){
 								i++ ; 
 								first = 1 ; 
-								index = 0 ; 
 							}
 							else { 
 								if ( first == 0 ){
-									first_index[index] = buf[i] ; 
+									first_index[first_index] = buf[i] ; 
+									first_index++ ; 
 								}
 								else { 
-									second_index[index] = buf[i] ; 
+									second_index[second_index] = buf[i] ; 
+									second_index++ ; 
 								}
 								i++ ; 
 							}
+						}
+						first_index[index] = '\0' ; 
+						second_index[index] = '\0' ; 
+						if (buf[i] == ')'){
+							 i++ ;
 						}
 						float number = execute_commands(commands(dat) , first_index , second_index ) ; 
 						if ( number == nope ){
 							status_msg_input("the query is wrong ") ; 
 							return ; 
 						}
-						integers[pointer ] = number ; 
+						integers[num_pointer ] = number ; 
+						num_pointer++ ; 
+						 char number_string[50] ;
+						snprintf(number_string, sizeof(number_string), "%.2f", number) ;
+						data[pointer] = strdup(number_string) ;
 						pointer++ ; 
 					}
 				}
 
 			}
 			seperators[sep] = '\0' ; 
-			sep++ ; 
+
+
 			if ( quote ){
 				for ( int l = 0 ;seperators[l] != '\0' ; l++  ){
 					if (seperators[l] != '&' && seperators[l] != '(' && seperators[l] != ')' ){
@@ -1630,12 +1698,9 @@ void assign(char *buf ){
 					}
 				}
 				data[pointer] = NULL ; 
-				pointer++ ; 
 				char * ans = execute_prog_words( data ) ; 
-				if (proper_data.data[first[0]][first[1]] != NULL) {
- 				   free(proper_data.data[first[0]][first[1]]);
-				}
 				proper_data.data[first[0]][first[1]] = strdup(ans);
+				free(ans) ; 
 				if ( edit.col_max_sizes[first[0]] < strlen(ans) ){
 					edit.col_max_sizes[first[0]] = strlen(ans) ; 
 					excel_like() ; 
@@ -1646,15 +1711,11 @@ void assign(char *buf ){
 			}
 
 			else if ( num ){
-				integers[pointer] = nope ; 
-				pointer++ ; 
+				integers[num_pointer] = nope ; 
 				float as = execute_prog_nums(seperators , integers ) ; 
-				sprintf(size, "%.2f", as);
-				if (proper_data.data[first[0]][first[1]] != NULL) {
- 				   free(proper_data.data[first[0]][first[1]]);
-				}
+				sprintf(size, sizeof(size), "%.2f", as);
 				proper_data.data[first[0]][first[1]] = strdup(size);
-				if ( edit.col_max_sizes[first[0]] < strlen(size) ){
+				if ( edit.col_max_sizes[first[0]] < (int)strlen(size) ){
 					edit.col_max_sizes[first[0]] = strlen(size) ; 
 					excel_like() ; 
 				}
@@ -1662,34 +1723,49 @@ void assign(char *buf ){
 					arrange_data(first[1]) ; 
 				}
 			}
-
+    		free(data) ;
+  			  free(integers) ;
 		}	
 
-
+	free(first) ;
 
 }
+
+
+
 
 void process_query(){
-	char **buf = proper_data.query ;
-	int query = 0 ; 
-	for ( int i = 0 ; buf[i] != NULL  ; i++ ){
-		if ( buf[i][0] == '.'){
-			meta_commnds(buf[i]) ; 
+	for ( int i = 0 ; i < edit.query_lines ; i++ ){
+		char *data = edit.ri[i].data ; 
+		if ( data == NULL){
+			continue ; 
 		}
-		else { 
-			for ( int j  = 0 ; buf[i][j] != '\0' ; j++ ){
-				if ( j == 0 ){
-					continue ; 
+			int valid = 0 ; 
+			int i = 0 ; 
+
+			for (  i = 0 ; data[i] != NULL ; i++  ){
+				if ( (isalnum(data[i]) || seperator(data[i]) != NULL) && data[i] !='\0'   ){
+					valid = 1 ; 
+					break ; 
 				}
-				if ( query == 0 &&  isalpha(buf[i][j-1]) && isdigit(buf[i][j]) ){
-					assign(buf[i]) ; 
+				else { 
+					i++ ; 
 				}
 			}
+			if ( valid == 0 ){
+				continue ; 
+			}
+
+		if ( data[0] == '.'){
+			meta_commnds(line) ;
 		}
-
-
+		else { 
+            assign(line) ; 
+		}
 	}
 }
+
+
 
 
 
