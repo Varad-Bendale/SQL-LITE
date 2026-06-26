@@ -1821,18 +1821,24 @@ bool if_function( char* word ){
 
 
 
-void sql_queries_parsar(){
-	char **buf = proper_data.query ; 
-	
-	if ( strstr('SELECT' , buf[0]) == 0 ){ 
+
+
+
+tree* select_query(int row  , int col , int check  , int end_row , int end_col  ){
         int compulsary = 3 ;  
         int compulsion = 0 ; 
         char * prev[300] ; 
         tree* start_of_tree ; 
-       for ( int i = 0 ; i < edit.query_lines   ; i++ ){
+        tree* nested ; 
+        char **buf = proper_data.query ; 
+        if ( check == 1 ){
+            return NULL ; 
+        }
+        for ( int i = row ; i <= end_row  ; i++ ){
         int tempo = 0 ; 
-        for ( int j = 0 ; buf[i][j] != NULL  ; j++ ){
-            if ( i == 0 && j == 0 ){
+        for ( int j = col ; j <= end_col   ; j++ ){
+
+            if ( i == row && j == col ){
               tree* node =  createNode(buf[0]) ; 
               start_of_tree = node ; 
               prev = buf[0] ;
@@ -1841,19 +1847,33 @@ void sql_queries_parsar(){
               continue ; 
             }
 
-        else if ( buf[i][j] == ')'){
-            if ( compulsion < compulsary ){
-            if (buf[i][j+1] != NULL  ){
-                  if ( buf[i][j+1] == 'AS'){
-                    if ( buf[i][j+2] == NULL ){
+            else if ( buf[i][j] == ';'){
+                if ( compulsion < compulsary){
                         status_msg_input("the query is wrong ") ; 
-                        return ; 
-                    }
-                      start_of_tree->as = buf[i][j+2] ; 
-                 }
+                        check = 1 ; 
+                        return NULL  ;   
+                }
+                return node   ; 
             }
-        }
-        }
+
+            else if ( buf[i][j] == ')' && !if_function(prev)) {
+                if (buf[i][j+1] != NULL  ){
+                    if ( buf[i][j+1] == 'AS' && j+1 <= end_col ){
+                        if ( buf[i][j+2] == NULL && j+2 <= end_col ){
+                            status_msg_input("the query is wrong ") ; 
+                            return NULL ; 
+                        }
+                        if ( nested != NULL ){
+                        nested->as = buf[i][j+2] ; 
+                        }
+                    }
+                }
+                if ( i == end_row && j == end_col ){
+                    return start_of_tree ; 
+                }
+            }
+
+
 
 
             else if (compulsion == 1){
@@ -1864,41 +1884,79 @@ void sql_queries_parsar(){
                 prev = 'FROM' ; 
                 continue ; 
                }
-               else {
-                if ( buf[i][j] == '(' ){
-                    if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                    //recursion for the select 
-                
-                else { 
-                        status_msg_input("the query is wrong ") ; 
-		            	return ; 
+     
+                else if ( if_function( buf[i][j] ) == true ){
+                    tree* temp = node ; 
+                    tree *start = temp ; 
+                    while ( temp->right != NULL){
+                        temp = temp->right ; 
+                    }
+                    temp->right = createNode(buf[i][j]) ; 
+                    if ( buf[i][j+1] != NULL ){
+                        j++ ; 
+                    }
                 }
 
-               }
-               else { 
+
+               else {
+                    if ( buf[i][j] == '(' ){
+                        if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                            int end_col_dec  = 0 ; 
+                            int end_row_dec  = 0 ; 
+                            int braces = 1 ; 
+                            for ( int m = i ; m <= end_row ; m++  ){
+                                for ( int n = j+1 ; n <= end_col ; n++  ){
+                                    if ( buf[m][n] =='(' ){
+                                        braces++ ; 
+                                    }
+                                    else if ( buf[m][n] == ')'){
+                                        braces-- ; 
+                                    }
+                                    if ( braces == 0 ){
+                                        end_row_dec = m ; 
+                                        end_col_dec = n ; 
+                                        break ; 
+                                    }
+                                }
+                            }
+                            node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                            node = node->left ; 
+                            i = end_row_dec ; 
+                            j = end_col_dec ; 
+                        }
+                        else {
+                            status_msg_input("the query is wrong ") ; 
+                             check = 1 ; 
+                            return NULL  ; 
+                        }
+
+                }
+                else { 
                     if (if_syntax(buf[i][j]) == false ){
                     if ( buf[i][j] == ','){
                         tempo++ ; 
                         continue ; 
                     }
                     node->children[tempo] = buf[i][j] ; 
-                     }
+                    }
                     else { 
                         status_msg_input("the query is wrong ") ; 
-                            return ;   
+                        check = 1 ; 
+                            return NULL  ;   
+                        }
                     }
-            }
 
-            }
-            }
-
-            else if ( buf[i][j] == ';'){
-                if ( compulsion < compulsary){
-                        status_msg_input("the query is wrong ") ; 
-                        return ;   
                 }
-                return  ; 
+
             }
+
+
+
+
+
+
+
+
 
 
 
@@ -1910,91 +1968,177 @@ void sql_queries_parsar(){
                     prev = 'WHERE'  ; 
                     continue ; 
                 }
-                else { 
-                    if ( buf[i][j] == '(' ){
-                        if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                        //recursion for the select 
-                    
-                    else { 
+
+                if ( if_function( buf[i][j] ) == true ){
+                    tree* temp = node ; 
+                    tree *start = temp ; 
+                    while ( temp->right != NULL){
+                        temp = temp->right ; 
+                    }
+                    temp->right = createNode(buf[i][j]) ; 
+                    if ( buf[i][j+1] != NULL ){
+                        j++ ; 
+                    }
+                }
+
+
+                else if ( buf[i][j] == '(' ){
+                    if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                        int end_col_dec  = 0 ; 
+                        int end_row_dec  = 0 ; 
+                        int braces = 1 ; 
+                        for ( int m = i ; m <= end_row ; m++  ){
+                            for ( int n = j+1 ; n <= end_col ; n++  ){
+                                if ( buf[m][n] =='(' ){
+                                    braces++ ; 
+                                }
+                                else if ( buf[m][n] == ')'){
+                                    braces-- ; 
+                                }
+                                if ( braces == 0 ){
+                                    end_row_dec = m ; 
+                                    end_col_dec = n ; 
+                                    break ; 
+                                }
+                            }
+                        }
+                        node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                        node = node->left ; 
+                        i = end_row_dec ; 
+                        j = end_col_dec ; 
+                    }
+                    else {
                             status_msg_input("the query is wrong ") ; 
-                            return ; 
+                             check = 1 ; 
+                            return NULL  ; 
+                        }
                     }
-                    }
+
+
+
+
+
+
 
                     else if (  strstr('JOIN' , buf[i][j]) == 0  || 
-                        (strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) || 
-                        (strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
-                        (strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
-                            (strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
-                            (strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 )){
+                            ( j+1 <= end_col && strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) || 
+                            (j+1 <= end_col && strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
+                            (j+1 <= end_col && strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
+                            (j+1 <= end_col && strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
+                            (j+2 <= end_col && strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 )){
 
+            
+                            if (strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                temp->right = createNode( "INNER JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else if (strstr('JOIN' , buf[i][j]) == 0 ){
+                                temp->right = createNode(buf[i][j]) ; 
+                            }
+                            else if (strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                temp->right = createNode( "LEFT JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else if (strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                temp->right = createNode( "RIGHT JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else if (strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                    temp->right = createNode( "CROSS JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else  if ((strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 ) ){
+                                        temp->right = createNode( "FULL OUTER JOIN") ; 
+                                j = j + 2 ; 
+                            }
+
+                            int on = 0 ; 
                             tree* temp = node ; 
                             tree *start = temp ; 
                             while ( temp != NULL ){
                                 temp = temp->right ; 
                             }
-                            if (strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                temp->right = createNode( "INNER JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else if (strstr('JOIN' , buf[i][j]) == 0     ){
-                                temp->right = createNode(buf[i][j]) ; 
-                            }
-                            else if (strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                temp->right = createNode( "LEFT JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else if (strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                temp->right = createNode( "RIGHT JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else if (strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                    temp->right = createNode( "CROSS JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else  if ((strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 )    ){
-                                        temp->right = createNode( "FULL OUTER JOIN") ; 
-                                j = j + 2 ; 
-                            }
-                            int on = 0 ; 
+
+
+
+
+
                             while ( ( !if_syntax(buf[i][j]) || (buf[i][j] == 'ON' ) && on == 0 )  ){
+
+
                                 if ( buf[i][j] == 'ON'){
-                                    if ( temp->comp == 'CROSS MODEL'){
-                                            status_msg_input("the query is wrong ") ; 
-                                        return ; 
-                                    }
-                                    else if (temp->children == NULL ){
-                                            status_msg_input("the query is wrong ") ; 
-                                        return ; 
-                                    }
-                                    else{
-                                        temp->left = createNode('ON') ; 
-                                        temp= temp->left ; 
-                                        temp->left = createNode('=') ;                                     
-                                        on++ ; 
-                                    }
+                                        if ( temp->comp == 'CROSS MODEL'){
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                                return NULL ; 
+                                        }
+
+                                        else if (temp->children == NULL ){
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                            return NULL ; 
+                                        }
+
+                                        else{
+                                            temp->left = createNode('ON') ; 
+                                            temp= temp->left ; 
+                                            temp->left = createNode('=') ;                                     
+                                            on++ ; 
+                                        }
                                 }
+
+
+
                                 else { 
-                                    if ( buf[i][j] == '='){
-                                        if ( on == 1 ){
-                                            continue ; 
+
+                                        if ( buf[i][j] == '='){
+                                            if ( on == 1 ){
+                                                continue ; 
+                                            }
+                                            else { 
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                                return NULL ; 
+                                            }
                                         }
-                                        else { 
-                                            status_msg_input("the query is wrong ") ; 
-                                        return ; 
-                                        }
-                                    }
+
+
 
                                     else { 
-                                         if ( buf[i][j] == '(' ){
-                                                if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                                                //recursion for the select 
-                                            
-                                                else { 
-                                                        status_msg_input("the query is wrong ") ; 
-                                                        return ; 
+                                            if ( buf[i][j] == '(' ){
+                                            if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                                int end_col_dec  = 0 ; 
+                                                int end_row_dec  = 0 ; 
+                                                int braces = 1 ; 
+                                                for ( int m = i ; m <= end_row ; m++  ){
+                                                    for ( int n = j+1 ; n <= end_col ; n++  ){
+                                                        if ( buf[m][n] =='(' ){
+                                                            braces++ ; 
+                                                        }
+                                                        else if ( buf[m][n] == ')'){
+                                                            braces-- ; 
+                                                        }
+                                                        if ( braces == 0 ){
+                                                            end_row_dec = m ; 
+                                                            end_col_dec = n ; 
+                                                            break ; 
+                                                        }
+                                                    }
+                                                }
+                                                node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                                node = node->left ; 
+                                                i = end_row_dec ; 
+                                                j = end_col_dec ; 
+                                            }
+                                            else {
+                                                    status_msg_input("the query is wrong ") ; 
+                                                    check = 1 ; 
+                                                    return NULL  ; 
                                                 }
                                             }
+
+
+
                                         if (if_syntax(buf[i][j]) == false ){
                                         if ( buf[i][j] == ','){
                                             tempo++ ; 
@@ -2003,30 +2147,22 @@ void sql_queries_parsar(){
                                         node->children[tempo] = buf[i][j] ; 
                                         }
                                         else { 
-                                            status_msg_input("the query is wrong ") ; 
-                                                return ;   
+                                            status_msg_input("the query is wrong ") ;
+                                            check = 1 ;  
+                                            return NULL  ;   
                                         }
                                     }
+
+
                                 }
                             }
                             node->right = start ; 
                             i = i-1 ; 
-
-
-
                         }
+
+
 
                     else { 
-                        if ( buf[i][j] == '(' ){
-                            if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                            //recursion for the select 
-                        
-                            else { 
-                                    status_msg_input("the query is wrong ") ; 
-                                    return ; 
-                            }
-                        }
-
                         if (if_syntax(buf[i][j]) == false ){
                             if ( buf[i][j] == ','){
                                 tempo++ ; 
@@ -2036,196 +2172,221 @@ void sql_queries_parsar(){
                         }
                         else { 
                             status_msg_input("the query is wrong ") ; 
-                                return ;   
+                            check = 1 ; 
+                                return NULL ;   
                         }
                     }
 
                 
-                }
 
 
 
                 }
 
 
-            else if ( compulsion == 3){
-                    if ( buf[i][j] == '(' ){
-                        if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                        //recursion for the select 
-                    
-                    else { 
+
+
+
+
+
+
+
+            else if ( compulsion == 3 ){
+
+                if ( if_function( buf[i][j] ) == true ){
+                    tree* temp = node ; 
+                    tree *start = temp ; 
+                    while ( temp->right != NULL){
+                        temp = temp->right ; 
+                    }
+                    temp->right = createNode(buf[i][j]) ; 
+                    if ( buf[i][j+1] != NULL ){
+                        j++ ; 
+                    }
+                }
+
+
+                else if ( buf[i][j] == '(' ){
+                    if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                        int end_col_dec  = 0 ; 
+                        int end_row_dec  = 0 ; 
+                        int braces = 1 ; 
+                        for ( int m = i ; m <= end_row ; m++  ){
+                            for ( int n = j+1 ; n <= end_col ; n++  ){
+                                if ( buf[m][n] =='(' ){
+                                    braces++ ; 
+                                }
+                                else if ( buf[m][n] == ')'){
+                                    braces-- ; 
+                                }
+                                if ( braces == 0 ){
+                                    end_row_dec = m ; 
+                                    end_col_dec = n ; 
+                                    break ; 
+                                }
+                            }
+                        }
+                        node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                        node = node->left ; 
+                        i = end_row_dec ; 
+                        j = end_col_dec ; 
+                    }
+                    else {
                             status_msg_input("the query is wrong ") ; 
-                            return ; 
+                             check = 1 ; 
+                            return NULL  ; 
+                        }
                     }
-                    }
+
+
+
+
+
+
 
                     else if (  strstr('JOIN' , buf[i][j]) == 0  || 
-                        (strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) || 
-                        (strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
-                        (strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
-                            (strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
-                            (strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 )){
+                            ( j+1 <= end_col && strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) || 
+                            (j+1 <= end_col && strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
+                            (j+1 <= end_col && strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
+                            (j+1 <= end_col && strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0  ) ||  
+                            (j+2 <= end_col && strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 )){
 
+            
+                            if (strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                temp->right = createNode( "INNER JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else if (strstr('JOIN' , buf[i][j]) == 0 ){
+                                temp->right = createNode(buf[i][j]) ; 
+                            }
+                            else if (strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                temp->right = createNode( "LEFT JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else if (strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                temp->right = createNode( "RIGHT JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else if (strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0 ){
+                                    temp->right = createNode( "CROSS JOIN") ; 
+                                j = j + 1 ; 
+                            }
+                            else  if ((strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 ) ){
+                                        temp->right = createNode( "FULL OUTER JOIN") ; 
+                                j = j + 2 ; 
+                            }
+
+                            int on = 0 ; 
                             tree* temp = node ; 
                             tree *start = temp ; 
                             while ( temp != NULL ){
                                 temp = temp->right ; 
                             }
-                            if (strstr('INNER' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                temp->right = createNode( "INNER JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else if (strstr('JOIN' , buf[i][j]) == 0     ){
-                                temp->right = createNode(buf[i][j]) ; 
-                            }
-                            else if (strstr('LEFT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                temp->right = createNode( "LEFT JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else if (strstr('RIGHT' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                temp->right = createNode( "RIGHT JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else if (strstr('CROSS' , buf[i][j]) == 0 && strstr('JOIN' , buf[i][j+1]) == 0    ){
-                                    temp->right = createNode( "CROSS JOIN") ; 
-                                j = j + 1 ; 
-                            }
-                            else  if ((strstr('FULL' , buf[i][j]) == 0 && strstr('OUTER' , buf[i][j+1]) == 0 && strstr('JOIN' , buf[i][j+2]) == 0 )    ){
-                                        temp->right = createNode( "FULL OUTER JOIN") ; 
-                                j = j + 2 ; 
-                            }
-                            int on = 0 ; 
+
+
+
+
+
                             while ( ( !if_syntax(buf[i][j]) || (buf[i][j] == 'ON' ) && on == 0 )  ){
+
+
                                 if ( buf[i][j] == 'ON'){
-                                    if ( temp->comp == 'CROSS MODEL'){
-                                            status_msg_input("the query is wrong ") ; 
-                                        return ; 
-                                    }
-                                    else if (temp->children == NULL ){
-                                            status_msg_input("the query is wrong ") ; 
-                                        return ; 
-                                    }
-                                    else{
-                                        temp->left = createNode('ON') ; 
-                                        temp= temp->left ; 
-                                        temp->left = createNode('=') ;                                     
-                                        on++ ; 
-                                    }
+                                        if ( temp->comp == 'CROSS MODEL'){
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                                return NULL ; 
+                                        }
+
+                                        else if (temp->children == NULL ){
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                            return NULL ; 
+                                        }
+
+                                        else{
+                                            temp->left = createNode('ON') ; 
+                                            temp= temp->left ; 
+                                            temp->left = createNode('=') ;                                     
+                                            on++ ; 
+                                        }
                                 }
+
+
+
                                 else { 
-                                    if ( buf[i][j] == '='){
-                                        if ( on == 1 ){
-                                            continue ; 
+
+                                        if ( buf[i][j] == '='){
+                                            if ( on == 1 ){
+                                                continue ; 
+                                            }
+                                            else { 
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                                return NULL ; 
+                                            }
                                         }
-                                        else { 
-                                            status_msg_input("the query is wrong ") ; 
-                                        return ; 
-                                        }
-                                    }
+
+
 
                                     else { 
-                                         if ( buf[i][j] == '(' ){
-                                                if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                                                //recursion for the select 
-                                            
-                                                else { 
-                                                        status_msg_input("the query is wrong ") ; 
-                                                        return ; 
+                                            if ( buf[i][j] == '(' ){
+                                            if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                                int end_col_dec  = 0 ; 
+                                                int end_row_dec  = 0 ; 
+                                                int braces = 1 ; 
+                                                for ( int m = i ; m <= end_row ; m++  ){
+                                                    for ( int n = j+1 ; n <= end_col ; n++  ){
+                                                        if ( buf[m][n] =='(' ){
+                                                            braces++ ; 
+                                                        }
+                                                        else if ( buf[m][n] == ')'){
+                                                            braces-- ; 
+                                                        }
+                                                        if ( braces == 0 ){
+                                                            end_row_dec = m ; 
+                                                            end_col_dec = n ; 
+                                                            break ; 
+                                                        }
+                                                    }
+                                                }
+                                                node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                                node = node->left ; 
+                                                i = end_row_dec ; 
+                                                j = end_col_dec ; 
+                                            }
+                                            else {
+                                                    status_msg_input("the query is wrong ") ; 
+                                                    check = 1 ; 
+                                                    return NULL  ; 
                                                 }
                                             }
+
+
+
                                         if (if_syntax(buf[i][j]) == false ){
                                         if ( buf[i][j] == ','){
                                             tempo++ ; 
                                             continue ; 
                                         }
-                                        temp->children[tempo] = buf[i][j] ; 
+                                        node->children[tempo] = buf[i][j] ; 
                                         }
                                         else { 
-                                            status_msg_input("the query is wrong ") ; 
-                                                return ;   
+                                            status_msg_input("the query is wrong ") ;
+                                            check = 1 ;  
+                                            return NULL  ;   
                                         }
                                     }
+
+
                                 }
                             }
                             node->right = start ; 
                             i = i-1 ; 
-
-
-
                         }
 
-                    else if (buf[i][j] == 'GROUP'){
-                        if (buf[i][j+1] != NULL ){
-                            if (buf[i][j+1] == 'BY' ){
-                                node->left = createNode('GROUP BY') ; 
-                                node = node->left ; 
-                                tree *temp = node ; 
-                                tree *start_temp = temp ; 
-                                tempo = 0 ; 
-                                while ( buf[i][j] != '\0' || buf[i][j] == ' '){ // add all the rest of the syntax where to stop
-                                if ( if_function( buf[i][j] ) == true ){
-                                    tree* temp = node ; 
-                                    tree *start = temp ; 
-                                    while ( temp->right != NULL){
-                                        temp = temp->right ; 
-                                    }
-                                    temp->right = createNode(buf[i][j]) ; 
-                                    if ( buf[i][j+1] != NULL ){
-                                        j++ ; 
-                                    }
-                                }
-
-                                else { 
-                                    if ( buf[i][j] == '(' ){
-                                        if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                                        //recursion for the select 
-                                    
-                                        else { 
-                                            else { 
-                                                status_msg_input("the query is wrong ") ; 
-                                                return ; 
-                                            }
-                                    }
-
-                                    if (if_syntax(buf[i][j]) == false && if_function(buf[i][j]) == false  ){
-                                        if ( buf[i][j] == ','){
-                                            tempo++ ; 
-                                            continue ; 
-                                        }
-                                        temp->children[tempo] = buf[i][j] ; 
-                                    }
-                                    else { 
-                                        status_msg_input("the query is wrong ") ; 
-                                            return ;   
-                                    }
-                                }
-                                }
-
-
-                            }
-                            else { 
-                               status_msg_input("the query is wrong ") ; 
-                                return ;   
-                            }
-                        }
-                        else { 
-                              status_msg_input("the query is wrong ") ; 
-                            return ;  
-                        }
-                    }
 
 
                     else { 
-                        if ( buf[i][j] == '(' ){
-                            if ( strstr('SELECT' , buf[i][j+1]) == 0  )
-                            //recursion for the select 
-                        
-                            else { 
-                                    status_msg_input("the query is wrong ") ; 
-                                    return ; 
-                            }
-                        }
-
                         if (if_syntax(buf[i][j]) == false ){
                             if ( buf[i][j] == ','){
                                 tempo++ ; 
@@ -2235,20 +2396,32 @@ void sql_queries_parsar(){
                         }
                         else { 
                             status_msg_input("the query is wrong ") ; 
-                                return ;   
+                            check = 1 ; 
+                                return NULL ;   
                         }
                     }
 
                 
+
+
+
                 }
 
 
-            }
-       }
-	}
+
+
+                
+
+
+
+
+
+
+        }
 
 }
-}
+
+
 
 
 void process_query(){
