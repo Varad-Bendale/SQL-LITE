@@ -8,6 +8,7 @@ typedef struct Tree_def {
     int child_count;
 	int line;                 
     int col;
+    int num  ; 
 } Tree_def;
 
 
@@ -24,14 +25,11 @@ tree* createNode( char* comp) {
     node->children = NULL;
     node->direction = NULL ;  
     node->child_count = 0;
+    node->num = 0  ; 
     return node;
 }
 
 
-
-char * priority(int row , int col ){
-    for ( int i = 0 ; i < )
-}
 
 
 char *SQL_functions[] = {
@@ -129,7 +127,6 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
             return NULL ; 
         }
         for ( int i = row ; i <= end_row  ; i++ ){
-        int tempo = 0 ; 
         for ( int j = col ; j <= end_col   ; j++ ){
 
             if ( i == row && j == col ){
@@ -179,70 +176,218 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                 continue ; 
                }
      
-                else if ( if_function( buf[i][j] ) == true ){
-                    tree* temp = node ; 
-                    tree *start = temp ; 
-                    while ( temp->right != NULL){
-                        temp = temp->right ; 
-                    }
-                    temp->right = createNode(buf[i][j]) ; 
-                    if ( buf[i][j+1] != NULL ){
-                        j++ ; 
-                    }
-                }
+                if ( if_function( buf[i][j] ) == true ){
+                        tree* temp = node ; 
+                        tree *start = temp ; 
+                        while ( temp->right != NULL){
+                            temp = temp->right ; 
+                        }
+                        temp->right = createNode(buf[i][j]) ; 
+                        if ( buf[i][j+1] != NULL ){
+                            j++ ; 
+                        }
+                        while ( buf[i][j] != ')'){
+                                if ( buf[i][j] == '(' ){
+                                        if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                            int end_col_dec  = 0 ; 
+                                            int end_row_dec  = 0 ; 
+                                            int braces = 1 ; 
+                                            for ( int m = i ; m <= end_row ; m++  ){
+                                                for ( int n = j+1 ; n <= end_col ; n++  ){
+                                                    if ( buf[m][n] =='(' ){
+                                                        braces++ ; 
+                                                    }
+                                                    else if ( buf[m][n] == ')'){
+                                                        braces-- ; 
+                                                    }
+                                                    if ( braces == 0 ){
+                                                        end_row_dec = m ; 
+                                                        end_col_dec = n ; 
+                                                        break ; 
+                                                    }
+                                                }
+                                            }
+                                            node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                            node = node->left ; 
+                                            i = end_row_dec ; 
+                                            j = end_col_dec ; 
+                                        }
+                                        else {
+                                            status_msg_input("the query is wrong ") ; 
+                                            check = 1 ; 
+                                            return NULL  ; 
+                                        }
+
+                                }
+
+                                else {
+                                        char * operands[300] ; 
+                                        char * operators[300] ; 
+                                        int g_temp = 0 ; 
+                                        char *string_temp; 
+                                        tree *exp_tree = node ; 
+                                        int operator_top = 0 ; 
+                                        int operand_top = 0 ; 
+                                        tree * prev_tree = NULL ; 
+                                        if ( priority(buf[i][j]) != 0  ){
+                                        while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                            if ( priority(buf[i][j]) != 0  ){
+                                                if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                                    char concat_buf[600] ;       
+                                                    strcpy(concat_buf, buf[i][j]) ;
+                                                    strcat(concat_buf, buf[i][j+1]) ;
+                                                    string_temp = concat_buf ;
+                                                    top++ ;
+                                                }
+                                                else { 
+                                                    string_temp = buf[i][j] ; 
+                                                    top++ ; 
+                                                }
+                                                if ( operator_top == 0 ){
+                                                    operators[operator_top] = string_temp ; 
+                                                }
+                                                else { 
+                                                    if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                                    while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                                        tree * new  = createNode(string_temp ) ; 
+                                                        operator_top-- ; 
+                                                        int pal = 0 ; 
+                                                        while ( pal < 2 ){
+                                                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                                new->right = prev_tree ; 
+                                                            }
+                                                            else { 
+                                                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                            }
+                                                            pal++ ; 
+                                                            operand_top-- ; 
+                                                        }
+
+                                                        exp_tree->right = new ; 
+                                                        prev_tree = new ; 
+                                                        operand_top++ ; 
+                                                        operands[operand_top] = "varad" ; 
+                                                    }
+                                                    operator_top++ ; 
+                                                    operators[operator_top] = string_temp ; 
+                                                }
+                                                    else  {
+                                                        operator_top++ ; 
+                                                        operators[operator_top] = string_temp ; 
+                                                    }
+                                                }
+                                            }
+                                            else { 
+                                                operands[operand_top] = buf[i][j] ; 
+                                                operand_top++ ; 
+                                            }
+                                        }
+                                        while (operator_top > 0) {
+                                            operator_top-- ; 
+                                            char** new = createNode(operators[operator_top]);
+                                            int pal = 0 ; 
+                                                while ( pal < 2 ){
+                                                    if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                        new->right = prev_tree ; 
+                                                    }
+                                                    else { 
+                                                        new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                    }
+                                                    pal++ ; 
+                                                    operand_top-- ; 
+                                                }
+                                            prev_tree = new ; 
+                                            operand_top++ ; 
+                                            operands[operand_top] = new_node;
+                                        }
 
 
-               else {
-                    if ( buf[i][j] == '(' ){
-                        if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
-                            int end_col_dec  = 0 ; 
-                            int end_row_dec  = 0 ; 
-                            int braces = 1 ; 
-                            for ( int m = i ; m <= end_row ; m++  ){
-                                for ( int n = j+1 ; n <= end_col ; n++  ){
-                                    if ( buf[m][n] =='(' ){
-                                        braces++ ; 
+                                        node->left = exp_tree ; 
+                                        
+                                        if ( j-1 >= col ){
+                                            j = j - 1 ;
+                                        }
+
+
                                     }
-                                    else if ( buf[m][n] == ')'){
-                                        braces-- ; 
-                                    }
-                                    if ( braces == 0 ){
-                                        end_row_dec = m ; 
-                                        end_col_dec = n ; 
-                                        break ; 
+                                    else { 
+                                        if (if_syntax(buf[i][j]) == false ){
+                                                if ( buf[i][j] == ','){
+                                                    node->num++ ; 
+                                                    continue ; 
+                                                }
+                                                    operands[operand_top] = buf[i][j] ; 
+                                                operand_top++ ; 
+                                                node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                                node->num++ ; 
+                                            }
+                                            else { 
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                                    return NULL ;   
+                                            }
+                                                            
                                     }
                                 }
-                            }
-                            node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
-                            node = node->left ; 
-                            i = end_row_dec ; 
-                            j = end_col_dec ; 
-                        }
-                        else {
-                            status_msg_input("the query is wrong ") ; 
-                             check = 1 ; 
-                            return NULL  ; 
-                        }
 
-                }
-                else { 
-                    if (if_syntax(buf[i][j]) == false ){
-                    if ( buf[i][j] == ','){
-                        tempo++ ; 
-                        continue ; 
+
+                        }
+                        node->right  = start ; 
+                        
                     }
-                    node->children[tempo] = make_leaf(buf[i][j] , i , j ) ; 
+
+
+                else {
+                        if ( buf[i][j] == '(' ){
+                            if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                int end_col_dec  = 0 ; 
+                                int end_row_dec  = 0 ; 
+                                int braces = 1 ; 
+                                for ( int m = i ; m <= end_row ; m++  ){
+                                    for ( int n = j+1 ; n <= end_col ; n++  ){
+                                        if ( buf[m][n] =='(' ){
+                                            braces++ ; 
+                                        }
+                                        else if ( buf[m][n] == ')'){
+                                            braces-- ; 
+                                        }
+                                        if ( braces == 0 ){
+                                            end_row_dec = m ; 
+                                            end_col_dec = n ; 
+                                            break ; 
+                                        }
+                                    }
+                                }
+                                node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                node = node->left ; 
+                                i = end_row_dec ; 
+                                j = end_col_dec ; 
+                            }
+                            else {
+                                status_msg_input("the query is wrong ") ; 
+                                check = 1 ; 
+                                return NULL  ; 
+                            }
+
                     }
                     else { 
-                        status_msg_input("the query is wrong ") ; 
-                        check = 1 ; 
-                            return NULL  ;   
+                        if (if_syntax(buf[i][j]) == false ){
+                        if ( buf[i][j] == ','){
+                            node->num++ ; 
+                            continue ; 
                         }
+                        node->children[node->num] = make_leaf(buf[i][j] , i , j ) ; 
+                        }
+                        else { 
+                            status_msg_input("the query is wrong ") ; 
+                            check = 1 ; 
+                                return NULL  ;   
+                            }
+                        }
+
                     }
 
                 }
-
-            }
 
 
 
@@ -263,17 +408,166 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                     continue ; 
                 }
 
-                if ( if_function( buf[i][j] ) == true ){
-                    tree* temp = node ; 
-                    tree *start = temp ; 
-                    while ( temp->right != NULL){
-                        temp = temp->right ; 
+                    if ( if_function( buf[i][j] ) == true ){
+                        tree* temp = node ; 
+                        tree *start = temp ; 
+                        while ( temp->right != NULL){
+                            temp = temp->right ; 
+                        }
+                        temp->right = createNode(buf[i][j]) ; 
+                        if ( buf[i][j+1] != NULL ){
+                            j++ ; 
+                        }
+                        while ( buf[i][j] != ')'){
+                                if ( buf[i][j] == '(' ){
+                                        if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                            int end_col_dec  = 0 ; 
+                                            int end_row_dec  = 0 ; 
+                                            int braces = 1 ; 
+                                            for ( int m = i ; m <= end_row ; m++  ){
+                                                for ( int n = j+1 ; n <= end_col ; n++  ){
+                                                    if ( buf[m][n] =='(' ){
+                                                        braces++ ; 
+                                                    }
+                                                    else if ( buf[m][n] == ')'){
+                                                        braces-- ; 
+                                                    }
+                                                    if ( braces == 0 ){
+                                                        end_row_dec = m ; 
+                                                        end_col_dec = n ; 
+                                                        break ; 
+                                                    }
+                                                }
+                                            }
+                                            node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                            node = node->left ; 
+                                            i = end_row_dec ; 
+                                            j = end_col_dec ; 
+                                        }
+                                        else {
+                                            status_msg_input("the query is wrong ") ; 
+                                            check = 1 ; 
+                                            return NULL  ; 
+                                        }
+
+                                }
+
+                                else {
+                                        char * operands[300] ; 
+                                        char * operators[300] ; 
+                                        int g_temp = 0 ; 
+                                        char *string_temp; 
+                                        tree *exp_tree = node ; 
+                                        int operator_top = 0 ; 
+                                        int operand_top = 0 ; 
+                                        tree * prev_tree = NULL ; 
+                                        if ( priority(buf[i][j]) != 0  ){
+                                        while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                            if ( priority(buf[i][j]) != 0  ){
+                                                if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                                    char concat_buf[600] ;       
+                                                    strcpy(concat_buf, buf[i][j]) ;
+                                                    strcat(concat_buf, buf[i][j+1]) ;
+                                                    string_temp = concat_buf ;
+                                                    top++ ;
+                                                }
+                                                else { 
+                                                    string_temp = buf[i][j] ; 
+                                                    top++ ; 
+                                                }
+                                                if ( operator_top == 0 ){
+                                                    operators[operator_top] = string_temp ; 
+                                                }
+                                                else { 
+                                                    if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                                    while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                                        tree * new  = createNode(string_temp ) ; 
+                                                        operator_top-- ; 
+                                                        int pal = 0 ; 
+                                                        while ( pal < 2 ){
+                                                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                                new->right = prev_tree ; 
+                                                            }
+                                                            else { 
+                                                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                            }
+                                                            pal++ ; 
+                                                            operand_top-- ; 
+                                                        }
+
+                                                        exp_tree->right = new ; 
+                                                        prev_tree = new ; 
+                                                        operand_top++ ; 
+                                                        operands[operand_top] = "varad" ; 
+                                                    }
+                                                    operator_top++ ; 
+                                                    operators[operator_top] = string_temp ; 
+                                                }
+                                                    else  {
+                                                        operator_top++ ; 
+                                                        operators[operator_top] = string_temp ; 
+                                                    }
+                                                }
+                                            }
+                                            else { 
+                                                operands[operand_top] = buf[i][j] ; 
+                                                operand_top++ ; 
+                                            }
+                                        }
+                                        while (operator_top > 0) {
+                                            operator_top-- ; 
+                                            char** new = createNode(operators[operator_top]);
+                                            int pal = 0 ; 
+                                                while ( pal < 2 ){
+                                                    if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                        new->right = prev_tree ; 
+                                                    }
+                                                    else { 
+                                                        new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                    }
+                                                    pal++ ; 
+                                                    operand_top-- ; 
+                                                }
+                                            prev_tree = new ; 
+                                            operand_top++ ; 
+                                            operands[operand_top] = new_node;
+                                        }
+
+
+                                        node->left = exp_tree ; 
+                                        
+                                        if ( j-1 >= col ){
+                                            j = j - 1 ;
+                                        }
+
+
+                                    }
+                                    else { 
+                                        if (if_syntax(buf[i][j]) == false ){
+                                                if ( buf[i][j] == ','){
+                                                    node->num++ ; 
+                                                    continue ; 
+                                                }
+                                                    operands[operand_top] = buf[i][j] ; 
+                                                operand_top++ ; 
+                                                node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                                node->num++ ; 
+                                            }
+                                            else { 
+                                                status_msg_input("the query is wrong ") ; 
+                                                check = 1 ; 
+                                                    return NULL ;   
+                                            }
+                                                            
+                                    }
+                                }
+
+
+                        }
+                        node->right  = start ; 
+                        
                     }
-                    temp->right = createNode(buf[i][j]) ; 
-                    if ( buf[i][j+1] != NULL ){
-                        j++ ; 
-                    }
-                }
+
 
 
                 else if ( buf[i][j] == '(' ){
@@ -452,10 +746,10 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
 
                                         if (if_syntax(buf[i][j]) == false ){
                                         if ( buf[i][j] == ','){
-                                            tempo++ ; 
+                                            node->num++ ; 
                                             continue ; 
                                         }
-                                        node->children[tempo] = make_leaf(buf[i][j] , i , j )  ; 
+                                        node->children[node->num] = make_leaf(buf[i][j] , i , j )  ; 
                                         }
                                         else { 
                                             status_msg_input("the query is wrong ") ;
@@ -476,10 +770,10 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                     else { 
                         if (if_syntax(buf[i][j]) == false ){
                             if ( buf[i][j] == ','){
-                                tempo++ ; 
+                                node->num++ ; 
                                 continue ; 
                             }
-                            node->children[tempo] =make_leaf(buf[i][j] , i , j ) ; 
+                            node->children[node->num] =make_leaf(buf[i][j] , i , j ) ; 
                         }
                         else { 
                             status_msg_input("the query is wrong ") ; 
@@ -502,8 +796,10 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
 
 
 
-            else if ( compulsion == 3 ){
-                tree * comp = node ; 
+
+
+
+    else if ( compulsion == 3 ){
 
                 if ( if_function( buf[i][j] ) == true ){
                     tree* temp = node ; 
@@ -515,6 +811,154 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                     if ( buf[i][j+1] != NULL ){
                         j++ ; 
                     }
+                    while ( buf[i][j] != ')'){
+                            if ( buf[i][j] == '(' ){
+                                    if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                        int end_col_dec  = 0 ; 
+                                        int end_row_dec  = 0 ; 
+                                        int braces = 1 ; 
+                                        for ( int m = i ; m <= end_row ; m++  ){
+                                            for ( int n = j+1 ; n <= end_col ; n++  ){
+                                                if ( buf[m][n] =='(' ){
+                                                    braces++ ; 
+                                                }
+                                                else if ( buf[m][n] == ')'){
+                                                    braces-- ; 
+                                                }
+                                                if ( braces == 0 ){
+                                                    end_row_dec = m ; 
+                                                    end_col_dec = n ; 
+                                                    break ; 
+                                                }
+                                            }
+                                        }
+                                        node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                        node = node->left ; 
+                                        i = end_row_dec ; 
+                                        j = end_col_dec ; 
+                                    }
+                                    else {
+                                        status_msg_input("the query is wrong ") ; 
+                                        check = 1 ; 
+                                        return NULL  ; 
+                                    }
+
+                            }
+
+                            else {
+                                    char * operands[300] ; 
+                                    char * operators[300] ; 
+                                    int g_temp = 0 ; 
+                                    char *string_temp; 
+                                    tree *exp_tree = node ; 
+                                    int operator_top = 0 ; 
+                                    int operand_top = 0 ; 
+                                    tree * prev_tree = NULL ; 
+                                    if ( priority(buf[i][j]) != 0  ){
+                                    while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                        if ( priority(buf[i][j]) != 0  ){
+                                            if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                                char concat_buf[600] ;       
+                                                strcpy(concat_buf, buf[i][j]) ;
+                                                strcat(concat_buf, buf[i][j+1]) ;
+                                                string_temp = concat_buf ;
+                                                top++ ;
+                                            }
+                                            else { 
+                                                string_temp = buf[i][j] ; 
+                                                top++ ; 
+                                            }
+                                            if ( operator_top == 0 ){
+                                                operators[operator_top] = string_temp ; 
+                                            }
+                                            else { 
+                                                if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                                while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                                    tree * new  = createNode(string_temp ) ; 
+                                                    operator_top-- ; 
+                                                    int pal = 0 ; 
+                                                    while ( pal < 2 ){
+                                                        if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                            new->right = prev_tree ; 
+                                                        }
+                                                        else { 
+                                                            new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                        }
+                                                        pal++ ; 
+                                                        operand_top-- ; 
+                                                    }
+
+                                                    exp_tree->right = new ; 
+                                                    prev_tree = new ; 
+                                                    operand_top++ ; 
+                                                    operands[operand_top] = "varad" ; 
+                                                }
+                                                operator_top++ ; 
+                                                operators[operator_top] = string_temp ; 
+                                            }
+                                                else  {
+                                                    operator_top++ ; 
+                                                    operators[operator_top] = string_temp ; 
+                                                }
+                                            }
+                                        }
+                                        else { 
+                                            operands[operand_top] = buf[i][j] ; 
+                                            operand_top++ ; 
+                                        }
+                                    }
+                                    while (operator_top > 0) {
+                                        operator_top-- ; 
+                                        char** new = createNode(operators[operator_top]);
+                                        int pal = 0 ; 
+                                            while ( pal < 2 ){
+                                                if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                    new->right = prev_tree ; 
+                                                }
+                                                else { 
+                                                    new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                }
+                                                pal++ ; 
+                                                operand_top-- ; 
+                                            }
+                                        prev_tree = new ; 
+                                        operand_top++ ; 
+                                        operands[operand_top] = new_node;
+                                    }
+
+
+                                    node->left = exp_tree ; 
+                                    
+                                    if ( j-1 >= col ){
+                                        j = j - 1 ;
+                                    }
+
+
+                                }
+                                else { 
+                                    if (if_syntax(buf[i][j]) == false ){
+                                            if ( buf[i][j] == ','){
+                                                node->num++ ; 
+                                                continue ; 
+                                            }
+                                                operands[operand_top] = buf[i][j] ; 
+                                            operand_top++ ; 
+                                            node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                            node->num++ ; 
+                                        }
+                                        else { 
+                                            status_msg_input("the query is wrong ") ; 
+                                            check = 1 ; 
+                                                return NULL ;   
+                                        }
+                                                        
+                                }
+                            }
+
+
+                    }
+                    node->right  = start ; 
+                    
                 }
 
 
@@ -578,7 +1022,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                                 node = node->left ; 
                                 tree *temp = node ; 
                                 tree *start_temp = temp ; 
-                                tempo = 0 ; 
+                                node->num = 0 ; 
                                 while ( buf[i][j] != '\0' || buf[i][j] == ' '){ // add all the rest of the syntax where to stop
 
 
@@ -590,23 +1034,159 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                                         temp = temp->right ; 
                                     }
                                     temp->right = createNode(buf[i][j]) ; 
-                                    temp = temp->right ; 
-                                    int count = 0 ; 
                                     if ( buf[i][j+1] != NULL ){
                                         j++ ; 
                                     }
-                                    while (  buf[i][j] != NULL &&  buf[i][j] != ')'){
-                                        if ( buf[i][j] == ','){
-                                            count++ ; 
-                                        }
-                                        else { 
-                                        temp->children[count] =make_leaf(buf[i][j] , i , j )  ; 
-                                        }
-                                        j++ ; 
+                                    while ( buf[i][j] != ')'){
+                                            if ( buf[i][j] == '(' ){
+                                                    if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                                        int end_col_dec  = 0 ; 
+                                                        int end_row_dec  = 0 ; 
+                                                        int braces = 1 ; 
+                                                        for ( int m = i ; m <= end_row ; m++  ){
+                                                            for ( int n = j+1 ; n <= end_col ; n++  ){
+                                                                if ( buf[m][n] =='(' ){
+                                                                    braces++ ; 
+                                                                }
+                                                                else if ( buf[m][n] == ')'){
+                                                                    braces-- ; 
+                                                                }
+                                                                if ( braces == 0 ){
+                                                                    end_row_dec = m ; 
+                                                                    end_col_dec = n ; 
+                                                                    break ; 
+                                                                }
+                                                            }
+                                                        }
+                                                        node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                                        node = node->left ; 
+                                                        i = end_row_dec ; 
+                                                        j = end_col_dec ; 
+                                                    }
+                                                    else {
+                                                        status_msg_input("the query is wrong ") ; 
+                                                        check = 1 ; 
+                                                        return NULL  ; 
+                                                    }
+
+                                            }
+
+                                            else {
+                                                    char * operands[300] ; 
+                                                    char * operators[300] ; 
+                                                    int g_temp = 0 ; 
+                                                    char *string_temp; 
+                                                    tree *exp_tree = node ; 
+                                                    int operator_top = 0 ; 
+                                                    int operand_top = 0 ; 
+                                                    tree * prev_tree = NULL ; 
+                                                    if ( priority(buf[i][j]) != 0  ){
+                                                    while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                                        if ( priority(buf[i][j]) != 0  ){
+                                                            if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                                                char concat_buf[600] ;       
+                                                                strcpy(concat_buf, buf[i][j]) ;
+                                                                strcat(concat_buf, buf[i][j+1]) ;
+                                                                string_temp = concat_buf ;
+                                                                top++ ;
+                                                            }
+                                                            else { 
+                                                                string_temp = buf[i][j] ; 
+                                                                top++ ; 
+                                                            }
+                                                            if ( operator_top == 0 ){
+                                                                operators[operator_top] = string_temp ; 
+                                                            }
+                                                            else { 
+                                                                if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                                                while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                                                    tree * new  = createNode(string_temp ) ; 
+                                                                    operator_top-- ; 
+                                                                    int pal = 0 ; 
+                                                                    while ( pal < 2 ){
+                                                                        if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                                            new->right = prev_tree ; 
+                                                                        }
+                                                                        else { 
+                                                                            new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                                        }
+                                                                        pal++ ; 
+                                                                        operand_top-- ; 
+                                                                    }
+
+                                                                    exp_tree->right = new ; 
+                                                                    prev_tree = new ; 
+                                                                    operand_top++ ; 
+                                                                    operands[operand_top] = "varad" ; 
+                                                                }
+                                                                operator_top++ ; 
+                                                                operators[operator_top] = string_temp ; 
+                                                            }
+                                                                else  {
+                                                                    operator_top++ ; 
+                                                                    operators[operator_top] = string_temp ; 
+                                                                }
+                                                            }
+                                                        }
+                                                        else { 
+                                                            operands[operand_top] = buf[i][j] ; 
+                                                            operand_top++ ; 
+                                                        }
+                                                    }
+                                                    while (operator_top > 0) {
+                                                        operator_top-- ; 
+                                                        char** new = createNode(operators[operator_top]);
+                                                        int pal = 0 ; 
+                                                            while ( pal < 2 ){
+                                                                if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                                    new->right = prev_tree ; 
+                                                                }
+                                                                else { 
+                                                                    new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                                }
+                                                                pal++ ; 
+                                                                operand_top-- ; 
+                                                            }
+                                                        prev_tree = new ; 
+                                                        operand_top++ ; 
+                                                        operands[operand_top] = new_node;
+                                                    }
+
+
+                                                    node->left = exp_tree ; 
+                                                    
+                                                    if ( j-1 >= col ){
+                                                        j = j - 1 ;
+                                                    }
+
+
+                                                }
+                                                else { 
+                                                    if (if_syntax(buf[i][j]) == false ){
+                                                            if ( buf[i][j] == ','){
+                                                                node->num++ ; 
+                                                                continue ; 
+                                                            }
+                                                                operands[operand_top] = buf[i][j] ; 
+                                                            operand_top++ ; 
+                                                            node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                                            node->num++ ; 
+                                                        }
+                                                        else { 
+                                                            status_msg_input("the query is wrong ") ; 
+                                                            check = 1 ; 
+                                                                return NULL ;   
+                                                        }
+                                                                        
+                                                }
+                                            }
+
+
                                     }
-                                    temp = start ; 
+                                    node->right  = start ; 
                                     
                                 }
+
 
 
 
@@ -647,10 +1227,10 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
 
                                         if (if_syntax(buf[i][j]) == false && if_function(buf[i][j]) == false  ){
                                             if ( buf[i][j] == ','){
-                                                tempo++ ; 
+                                                node->num++ ; 
                                                 continue ; 
                                             }
-                                            temp->children[tempo] = make_leaf(buf[i][j] , i , j )  ; 
+                                            temp->children[node->num] = make_leaf(buf[i][j] , i , j )  ; 
                                         }
                                         else { 
                                             status_msg_input("the query is wrong ") ; 
@@ -810,10 +1390,10 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
 
                                         if (if_syntax(buf[i][j]) == false ){
                                         if ( buf[i][j] == ','){
-                                            tempo++ ; 
+                                            node->num++ ; 
                                             continue ; 
                                         }
-                                        node->children[tempo] =make_leaf(buf[i][j] , i , j )  ; 
+                                        node->children[node->num] =make_leaf(buf[i][j] , i , j )  ; 
                                         }
                                         else { 
                                             status_msg_input("the query is wrong ") ;
@@ -831,40 +1411,6 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
 
 
 
-                    else { 
-                        if (if_syntax(buf[i][j]) == false ){
-                            if ( buf[i][j] == ','){
-                                tempo++ ; 
-                                continue ; 
-                            }
-                            node->children[tempo] = make_leaf(buf[i][j] , i , j )  ; 
-                        }
-                        else { 
-                            status_msg_input("the query is wrong ") ; 
-                            check = 1 ; 
-                                return NULL ;   
-                        }
-                    }
-
-                
-
-
-
-                }
-
-
-
-
-                
-
-
-
-
-
-
-        }
-
-}
 
 
 
@@ -872,79 +1418,620 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
 
 
 
-else {
-        char * operands[300] ; 
-        char * operators[300] ; 
-        int g_temp = 0 ; 
-        char *string_temp; 
-        if ( priority(buf[i][j]) != 0  ){
-        tree *exp_tree = node ; 
-        int operator_top = 0 ; 
-        int operand_top = 0 ; 
-        tree * prev_tree = NULL ; 
-        while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
-             if ( priority(buf[i][j]) != 0  ){
-                if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
-                    char concat_buf[600] ;       
-                    strcpy(concat_buf, buf[i][j]) ;
-                    strcat(concat_buf, buf[i][j+1]) ;
-                    string_temp = concat_buf ;
-                    top++ ;
-                }
-                else { 
-                    string_temp = buf[i][j] ; 
-                    top++ ; 
-                }
-                if ( operator_top == 0 ){
-                    operators[operator_top] = string_temp ; 
-                }
-                else { 
-                     if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
-                    while ( priority(string_temp) <= priority(operators[operator_top]  )){
-                        tree * new  = createNode(string_temp ) ; 
-                        operator_top-- ; 
-                        int pal = 0 ; 
-                        while ( pal < 2 ){
-                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
-                                new->right = prev_tree ; 
-                            
+
+                    else {
+                        char * operands[300] ; 
+                        char * operators[300] ; 
+                        int g_temp = 0 ; 
+                        char *string_temp; 
+                        tree *exp_tree = node ; 
+                        int operator_top = 0 ; 
+                        int operand_top = 0 ; 
+                        tree * prev_tree = NULL ; 
+                        if ( priority(buf[i][j]) != 0  ){
+                        while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                            if ( priority(buf[i][j]) != 0  ){
+                                if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                    char concat_buf[600] ;       
+                                    strcpy(concat_buf, buf[i][j]) ;
+                                    strcat(concat_buf, buf[i][j+1]) ;
+                                    string_temp = concat_buf ;
+                                    top++ ;
+                                }
+                                else { 
+                                    string_temp = buf[i][j] ; 
+                                    top++ ; 
+                                }
+                                if ( operator_top == 0 ){
+                                    operators[operator_top] = string_temp ; 
+                                }
+                                else { 
+                                    if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                    while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                        tree * new  = createNode(string_temp ) ; 
+                                        operator_top-- ; 
+                                        int pal = 0 ; 
+                                        while ( pal < 2 ){
+                                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                new->right = prev_tree ; 
+                                            }
+                                            else { 
+                                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                            }
+                                            pal++ ; 
+                                            operand_top-- ; 
+                                        }
+
+                                        exp_tree->right = new ; 
+                                        prev_tree = new ; 
+                                        operand_top++ ; 
+                                        operands[operand_top] = "varad" ; 
+                                    }
+                                    operator_top++ ; 
+                                    operators[operator_top] = string_temp ; 
+                                }
+                                    else  {
+                                        operator_top++ ; 
+                                        operators[operator_top] = string_temp ; 
+                                    }
+                                }
                             }
                             else { 
-                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                operands[operand_top] = buf[i][j] ; 
+                                operand_top++ ; 
                             }
-                            pal++ ; 
-                            operand_top-- ; 
+                        }
+                        while (operator_top > 0) {
+                            operator_top-- ; 
+                            char** new = createNode(operators[operator_top]);
+                            int pal = 0 ; 
+                                while ( pal < 2 ){
+                                    if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                        new->right = prev_tree ; 
+                                    }
+                                    else { 
+                                        new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                    }
+                                    pal++ ; 
+                                    operand_top-- ; 
+                                }
+                            prev_tree = new ; 
+                            operand_top++ ; 
+                            operands[operand_top] = new_node;
                         }
 
-                        exp_tree->right = new ; 
-                        prev_tree = new ; 
-                        operand_top++ ; 
-                        operands[operand_top] = "varad" ; 
+
+                        node->left = exp_tree ; 
+                        
+                        if ( j-1 >= col ){
+                            j = j - 1 ;
+                        }
+
+
+                        }
+                        else { 
+                            if (if_syntax(buf[i][j]) == false ){
+                                if ( buf[i][j] == ','){
+                                    node->num++ ; 
+                                    continue ; 
+                                }
+                                 operands[operand_top] = buf[i][j] ; 
+                                operand_top++ ; 
+                                node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                node->num++ ; 
+                            }
+                            else { 
+                                status_msg_input("the query is wrong ") ; 
+                                check = 1 ; 
+                                    return NULL ;   
+                            }
+                           
+                        }
+                        }
+
+
+                    
+
+                    
+
+
+
+
+
+
+
+
+
+
+
+
                     }
-                    operator_top++ ; 
-                    operators[operator_top] = string_temp ; 
+
+
+
+
+                                
+
+
+
+
+
+
+                        }
+
                 }
-                    else  {
-                        operator_top++ ; 
-                        operators[operator_top] = string_temp ; 
-                    }
+
+
+
+
+
+
+// expression ; 
+                                                                                    else {
+                                                                                            char * operands[300] ; 
+                                                                                            char * operators[300] ; 
+                                                                                            int g_temp = 0 ; 
+                                                                                            char *string_temp; 
+                                                                                            tree *exp_tree = node ; 
+                                                                                            int operator_top = 0 ; 
+                                                                                            int operand_top = 0 ; 
+                                                                                            tree * prev_tree = NULL ; 
+                                                                                            if ( priority(buf[i][j]) != 0  ){
+                                                                                            while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                                                                                if ( priority(buf[i][j]) != 0  ){
+                                                                                                    if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                                                                                        char concat_buf[600] ;       
+                                                                                                        strcpy(concat_buf, buf[i][j]) ;
+                                                                                                        strcat(concat_buf, buf[i][j+1]) ;
+                                                                                                        string_temp = concat_buf ;
+                                                                                                        top++ ;
+                                                                                                    }
+                                                                                                    else { 
+                                                                                                        string_temp = buf[i][j] ; 
+                                                                                                        top++ ; 
+                                                                                                    }
+                                                                                                    if ( operator_top == 0 ){
+                                                                                                        operators[operator_top] = string_temp ; 
+                                                                                                    }
+                                                                                                    else { 
+                                                                                                        if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                                                                                        while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                                                                                            tree * new  = createNode(string_temp ) ; 
+                                                                                                            operator_top-- ; 
+                                                                                                            int pal = 0 ; 
+                                                                                                            while ( pal < 2 ){
+                                                                                                                if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                                                                                    new->right = prev_tree ; 
+                                                                                                                }
+                                                                                                                else { 
+                                                                                                                    new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                                                                                }
+                                                                                                                pal++ ; 
+                                                                                                                operand_top-- ; 
+                                                                                                            }
+
+                                                                                                            exp_tree->right = new ; 
+                                                                                                            prev_tree = new ; 
+                                                                                                            operand_top++ ; 
+                                                                                                            operands[operand_top] = "varad" ; 
+                                                                                                        }
+                                                                                                        operator_top++ ; 
+                                                                                                        operators[operator_top] = string_temp ; 
+                                                                                                    }
+                                                                                                        else  {
+                                                                                                            operator_top++ ; 
+                                                                                                            operators[operator_top] = string_temp ; 
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                                else { 
+                                                                                                    operands[operand_top] = buf[i][j] ; 
+                                                                                                    operand_top++ ; 
+                                                                                                }
+                                                                                            }
+                                                                                            while (operator_top > 0) {
+                                                                                                operator_top-- ; 
+                                                                                                char** new = createNode(operators[operator_top]);
+                                                                                                int pal = 0 ; 
+                                                                                                    while ( pal < 2 ){
+                                                                                                        if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                                                                            new->right = prev_tree ; 
+                                                                                                        }
+                                                                                                        else { 
+                                                                                                            new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                                                                        }
+                                                                                                        pal++ ; 
+                                                                                                        operand_top-- ; 
+                                                                                                    }
+                                                                                                prev_tree = new ; 
+                                                                                                operand_top++ ; 
+                                                                                                operands[operand_top] = new_node;
+                                                                                            }
+
+
+                                                                                            node->left = exp_tree ; 
+                                                                                            
+                                                                                            if ( j-1 >= col ){
+                                                                                                j = j - 1 ;
+                                                                                            }
+
+
+                                                                                        }
+                                                                                        else { 
+                                                                                            if (if_syntax(buf[i][j]) == false ){
+                                                                                                    if ( buf[i][j] == ','){
+                                                                                                        node->num++ ; 
+                                                                                                        continue ; 
+                                                                                                    }
+                                                                                                        operands[operand_top] = buf[i][j] ; 
+                                                                                                    operand_top++ ; 
+                                                                                                    node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                                                                                    node->num++ ; 
+                                                                                                }
+                                                                                                else { 
+                                                                                                    status_msg_input("the query is wrong ") ; 
+                                                                                                    check = 1 ; 
+                                                                                                        return NULL ;   
+                                                                                                }
+                                                                                                                
+                                                                                        }
+                                                                                    }
+
+
+// group by 
+
+else if (buf[i][j] == 'GROUP'){
+    if (buf[i][j+1] != NULL ){
+        if (buf[i][j+1] == 'BY' ){
+            node->left = createNode('GROUP BY') ; 
+            node = node->left ; 
+            tree *temp = node ; 
+            tree *start_temp = temp ; 
+            node->num = 0 ; 
+            while ( buf[i][j] != '\0' || buf[i][j] == ' '){ // add all the rest of the syntax where to stop
+
+
+
+            if ( if_function( buf[i][j] ) == true ){
+                tree* temp = node ; 
+                tree *start = temp ; 
+                while ( temp->right != NULL){
+                    temp = temp->right ; 
                 }
+                temp->right = createNode(buf[i][j]) ; 
+                if ( buf[i][j+1] != NULL ){
+                    j++ ; 
+                }
+                while ( buf[i][j] != ')'){
+                        if ( buf[i][j] == '(' ){
+                                if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                                    int end_col_dec  = 0 ; 
+                                    int end_row_dec  = 0 ; 
+                                    int braces = 1 ; 
+                                    for ( int m = i ; m <= end_row ; m++  ){
+                                        for ( int n = j+1 ; n <= end_col ; n++  ){
+                                            if ( buf[m][n] =='(' ){
+                                                braces++ ; 
+                                            }
+                                            else if ( buf[m][n] == ')'){
+                                                braces-- ; 
+                                            }
+                                            if ( braces == 0 ){
+                                                end_row_dec = m ; 
+                                                end_col_dec = n ; 
+                                                break ; 
+                                            }
+                                        }
+                                    }
+                                    node->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                                    node = node->left ; 
+                                    i = end_row_dec ; 
+                                    j = end_col_dec ; 
+                                }
+                                else {
+                                    status_msg_input("the query is wrong ") ; 
+                                    check = 1 ; 
+                                    return NULL  ; 
+                                }
+
+                        }
+
+                        else {
+                                char * operands[300] ; 
+                                char * operators[300] ; 
+                                int g_temp = 0 ; 
+                                char *string_temp; 
+                                tree *exp_tree = node ; 
+                                int operator_top = 0 ; 
+                                int operand_top = 0 ; 
+                                tree * prev_tree = NULL ; 
+                                if ( priority(buf[i][j]) != 0  ){
+                                while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                    if ( priority(buf[i][j]) != 0  ){
+                                        if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                            char concat_buf[600] ;       
+                                            strcpy(concat_buf, buf[i][j]) ;
+                                            strcat(concat_buf, buf[i][j+1]) ;
+                                            string_temp = concat_buf ;
+                                            top++ ;
+                                        }
+                                        else { 
+                                            string_temp = buf[i][j] ; 
+                                            top++ ; 
+                                        }
+                                        if ( operator_top == 0 ){
+                                            operators[operator_top] = string_temp ; 
+                                        }
+                                        else { 
+                                            if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                            while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                                tree * new  = createNode(string_temp ) ; 
+                                                operator_top-- ; 
+                                                int pal = 0 ; 
+                                                while ( pal < 2 ){
+                                                    if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                        new->right = prev_tree ; 
+                                                    }
+                                                    else { 
+                                                        new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                    }
+                                                    pal++ ; 
+                                                    operand_top-- ; 
+                                                }
+
+                                                exp_tree->right = new ; 
+                                                prev_tree = new ; 
+                                                operand_top++ ; 
+                                                operands[operand_top] = "varad" ; 
+                                            }
+                                            operator_top++ ; 
+                                            operators[operator_top] = string_temp ; 
+                                        }
+                                            else  {
+                                                operator_top++ ; 
+                                                operators[operator_top] = string_temp ; 
+                                            }
+                                        }
+                                    }
+                                    else { 
+                                        operands[operand_top] = buf[i][j] ; 
+                                        operand_top++ ; 
+                                    }
+                                }
+                                while (operator_top > 0) {
+                                    operator_top-- ; 
+                                    char** new = createNode(operators[operator_top]);
+                                    int pal = 0 ; 
+                                        while ( pal < 2 ){
+                                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                new->right = prev_tree ; 
+                                            }
+                                            else { 
+                                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                            }
+                                            pal++ ; 
+                                            operand_top-- ; 
+                                        }
+                                    prev_tree = new ; 
+                                    operand_top++ ; 
+                                    operands[operand_top] = new_node;
+                                }
+
+
+                                node->left = exp_tree ; 
+                                
+                                if ( j-1 >= col ){
+                                    j = j - 1 ;
+                                }
+
+
+                            }
+                            else { 
+                                if (if_syntax(buf[i][j]) == false ){
+                                        if ( buf[i][j] == ','){
+                                            node->num++ ; 
+                                            continue ; 
+                                        }
+                                            operands[operand_top] = buf[i][j] ; 
+                                        operand_top++ ; 
+                                        node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                        node->num++ ; 
+                                    }
+                                    else { 
+                                        status_msg_input("the query is wrong ") ; 
+                                        check = 1 ; 
+                                            return NULL ;   
+                                    }
+                                                    
+                            }
+                        }
+
+
+                }
+                node->right  = start ; 
+                
             }
+
+            if  (strcmp([buf[i][j]  , 'HAVING' ]) == 0 ){
+                temp->left = createNode('HAVINGL')  ; 
+                temp = temp->left ; 
+            }
+
+
+
             else { 
-                operands[operand_top] = buf[i][j] ; 
-                operand_top++ ; 
+                    if ( buf[i][j] == '(' ){
+                        if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+                            int end_col_dec  = 0 ; 
+                            int end_row_dec  = 0 ; 
+                            int braces = 1 ; 
+                            for ( int m = i ; m <= end_row ; m++  ){
+                                for ( int n = j+1 ; n <= end_col ; n++  ){
+                                    if ( buf[m][n] =='(' ){
+                                        braces++ ; 
+                                    }
+                                    else if ( buf[m][n] == ')'){
+                                        braces-- ; 
+                                    }
+                                    if ( braces == 0 ){
+                                        end_row_dec = m ; 
+                                        end_col_dec = n ; 
+                                        break ; 
+                                    }
+                                }
+                            }
+                            temp->left = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
+                            temp = temp->left ; 
+                            i = end_row_dec ; 
+                            j = end_col_dec ; 
+                        }
+                        else {
+                                status_msg_input("the query is wrong ") ; 
+                                check = 1 ; 
+                                return NULL  ; 
+                            }
+                    }
+
+
+                    if (if_syntax(buf[i][j]) == false && if_function(buf[i][j]) == false  ){
+                        if ( buf[i][j] == ','){
+                            node->num++ ; 
+                            continue ; 
+                        }
+                        temp->children[node->num] = make_leaf(buf[i][j] , i , j )  ; 
+                    }
+                    else { 
+                                char * operands[300] ; 
+                                char * operators[300] ; 
+                                int g_temp = 0 ; 
+                                char *string_temp; 
+                                tree *exp_tree = node ; 
+                                int operator_top = 0 ; 
+                                int operand_top = 0 ; 
+                                tree * prev_tree = NULL ; 
+                                if ( priority(buf[i][j]) != 0  ){
+                                while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                    if ( priority(buf[i][j]) != 0  ){
+                                        if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                                            char concat_buf[600] ;       
+                                            strcpy(concat_buf, buf[i][j]) ;
+                                            strcat(concat_buf, buf[i][j+1]) ;
+                                            string_temp = concat_buf ;
+                                            top++ ;
+                                        }
+                                        else { 
+                                            string_temp = buf[i][j] ; 
+                                            top++ ; 
+                                        }
+                                        if ( operator_top == 0 ){
+                                            operators[operator_top] = string_temp ; 
+                                        }
+                                        else { 
+                                            if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                                            while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                                                tree * new  = createNode(string_temp ) ; 
+                                                operator_top-- ; 
+                                                int pal = 0 ; 
+                                                while ( pal < 2 ){
+                                                    if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                        new->right = prev_tree ; 
+                                                    }
+                                                    else { 
+                                                        new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                                    }
+                                                    pal++ ; 
+                                                    operand_top-- ; 
+                                                }
+
+                                                exp_tree->right = new ; 
+                                                prev_tree = new ; 
+                                                operand_top++ ; 
+                                                operands[operand_top] = "varad" ; 
+                                            }
+                                            operator_top++ ; 
+                                            operators[operator_top] = string_temp ; 
+                                        }
+                                            else  {
+                                                operator_top++ ; 
+                                                operators[operator_top] = string_temp ; 
+                                            }
+                                        }
+                                    }
+                                    else { 
+                                        operands[operand_top] = buf[i][j] ; 
+                                        operand_top++ ; 
+                                    }
+                                }
+                                while (operator_top > 0) {
+                                    operator_top-- ; 
+                                    char** new = createNode(operators[operator_top]);
+                                    int pal = 0 ; 
+                                        while ( pal < 2 ){
+                                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                                new->right = prev_tree ; 
+                                            }
+                                            else { 
+                                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                                            }
+                                            pal++ ; 
+                                            operand_top-- ; 
+                                        }
+                                    prev_tree = new ; 
+                                    operand_top++ ; 
+                                    operands[operand_top] = new_node;
+                                }
+
+
+                                node->left = exp_tree ; 
+                                
+                                if ( j-1 >= col ){
+                                    j = j - 1 ;
+                                }
+
+
+                            }
+                            else { 
+                                if (if_syntax(buf[i][j]) == false ){
+                                        if ( buf[i][j] == ','){
+                                            node->num++ ; 
+                                            continue ; 
+                                        }
+                                            operands[operand_top] = buf[i][j] ; 
+                                        operand_top++ ; 
+                                        node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
+                                        node->num++ ; 
+                                    }
+                                    else { 
+                                        status_msg_input("the query is wrong ") ; 
+                                        check = 1 ; 
+                                            return NULL ;   
+                                    }
+                                                    
+                            }
+                    }
             }
+            }
+
+            node->left = start_temp ; 
+
         }
-        node->left = exp_tree ; 
-        
-        if ( j-1 >= col ){
-             j = j - 1 ;
+        else { 
+            status_msg_input("the query is wrong ") ; 
+            check = 1 ; 
+            return NULL  ;  
         }
+    }
+
+
+    else { 
+            status_msg_input("the query is wrong ") ; 
+            check = 1 ; 
+            return NULL  ;
+    }
+
 
 
 }
-}
-
 
 
 
