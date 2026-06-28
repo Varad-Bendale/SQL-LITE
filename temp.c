@@ -81,6 +81,43 @@ Tree_def* make_leaf(char* value , int row , int col ) {
 
 
 
+
+
+int priority(char *string){
+    if ( strcmp("CASE" , string ) == 0 ){
+        return 1 ; 
+    }
+    else if (strcmp("OR" , string ) == 0  ){
+        return 2 ; 
+    }
+    else if (strcmp("AND" , string ) == 0  ){
+        return 3 ; 
+    }
+    else if (strcmp("NOT" , string ) == 0  ){
+        return 4 ; 
+    }
+    else if ( strcmp("BETWEEN" , string ) == 0  || strcmp("IN" , string ) == 0  || strcmp("LIKE" , string ) == 0  || strcmp("IS NULL" , string ) == 0  ||strcmp("EXISTS" , string ) == 0 ){
+        return 5 ; 
+    }
+
+    else if (  strcmp("=" , string ) == 0  || strcmp("!=" , string ) == 0  || strcmp("<>" , string ) == 0  || strcmp(">" , string ) == 0  || strcmp("<" , string ) == 0  || strcmp(">=" , string ) == 0  || strcmp("<=" , string ) == 0  ){
+        return 6 ; 
+    }
+    else if (strcmp("||" , string ) == 0   ){
+        return 7 ; 
+    }
+    else if ( strcmp("+" , string ) == 0   || strcmp("-" , string ) == 0  ){
+        return 8 ; 
+    }
+    else if (strcmp("*" , string ) == 0   || strcmp("/" , string ) == 0  || strcmp("%" , string ) == 0   ) {
+        return 9 ; 
+    }
+    return 0  ; 
+}
+
+
+
+
 tree* select_query(int row  , int col , int check  , int end_row , int end_col  ){
         int compulsary = 3 ;  
         int compulsion = 0 ; 
@@ -835,70 +872,81 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
 
 
 
-
-int top = 0 ; 
-int prev_priority = 0 ; 
 else {
-        char ** operands[300] ; 
-        char ** operators[300] ; 
+        char * operands[300] ; 
+        char * operators[300] ; 
         int g_temp = 0 ; 
-        char *string_temp[300] ; 
+        char *string_temp; 
         if ( priority(buf[i][j]) != 0  ){
-        if (priority(buf[i][j]) != 0 ){
-            string_temp = buf[i][j] ; 
-            top++ ; 
-        }
-        else if (priority(buf[i][j]) != 0 && j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
-            string_temp = strcat(buf[i][j] ,buf[i][j+1]  ) ; 
-            top++ ; 
-        }
-        if ( priority(string_temp) >= prev_priority){
-            
-        }
-        }
-        
+        tree *exp_tree = node ; 
+        int operator_top = 0 ; 
+        int operand_top = 0 ; 
+        tree * prev_tree = NULL ; 
+        while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+             if ( priority(buf[i][j]) != 0  ){
+                if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
+                    char concat_buf[600] ;       
+                    strcpy(concat_buf, buf[i][j]) ;
+                    strcat(concat_buf, buf[i][j+1]) ;
+                    string_temp = concat_buf ;
+                    top++ ;
+                }
+                else { 
+                    string_temp = buf[i][j] ; 
+                    top++ ; 
+                }
+                if ( operator_top == 0 ){
+                    operators[operator_top] = string_temp ; 
+                }
+                else { 
+                     if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
+                    while ( priority(string_temp) <= priority(operators[operator_top]  )){
+                        tree * new  = createNode(string_temp ) ; 
+                        operator_top-- ; 
+                        int pal = 0 ; 
+                        while ( pal < 2 ){
+                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
+                                new->right = prev_tree ; 
+                            
+                            }
+                            else { 
+                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                            }
+                            pal++ ; 
+                            operand_top-- ; 
+                        }
 
+                        exp_tree->right = new ; 
+                        prev_tree = new ; 
+                        operand_top++ ; 
+                        operands[operand_top] = "varad" ; 
+                    }
+                    operator_top++ ; 
+                    operators[operator_top] = string_temp ; 
+                }
+                    else  {
+                        operator_top++ ; 
+                        operators[operator_top] = string_temp ; 
+                    }
+                }
+            }
+            else { 
+                operands[operand_top] = buf[i][j] ; 
+                operand_top++ ; 
+            }
+        }
+        node->left = exp_tree ; 
+        
         if ( j-1 >= col ){
              j = j - 1 ;
         }
 
 
 }
-
-
-
-int priority(char *string){
-    if ( strcmp('CASE' , string ) == 0 ){
-        return 1 ; 
-    }
-    else if (strcmp('OR' , string ) == 0  ){
-        return 2 ; 
-    }
-    else if (strcmp('AND' , string ) == 0  ){
-        return 3 ; 
-    }
-    else if (strcmp('NOT' , string ) == 0  ){
-        return 4 ; 
-    }
-    else if ( strcmp('BETWEEN' , string ) == 0  || strcmp('IN' , string ) == 0  || strcmp('LIKE' , string ) == 0  || strcmp('IS NULL' , string ) == 0  ||strcmp('EXISTS' , string ) == 0 ){
-        return 5 ; 
-    }
-
-    else if (  strcmp('=' , string ) == 0  || strcmp('!=' , string ) == 0  || strcmp('<>' , string ) == 0  || strcmp('>' , string ) == 0  || strcmp('<' , string ) == 0  || strcmp('>=' , string ) == 0  || strcmp('<=' , string ) == 0  ){
-        return 6 ; 
-    }
-    else if (strcmp('||' , string ) == 0   ){
-        return 7 ; 
-    }
-    else if ( strcmp('+' , string ) == 0   || strcmp('-' , string ) == 0  ){
-        return 8 ; 
-    }
-    else if (strcmp('*' , string ) == 0   || strcmp('/' , string ) == 0  || strcmp('%' , string ) == 0   ) {
-        return 9 ; 
-    }
-    else {
-        return 10 ; 
-    }
-    return 0  ; 
 }
+
+
+
+
+
 
