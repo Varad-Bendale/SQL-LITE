@@ -1893,6 +1893,7 @@ tree *case(char **buf ,tree*node ,  int i , int j , int end_row , int end_col ){
                     }
                     temp->children[temp->num++] = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
                     temp = temp->children[temp->num - 1]; 
+                    nested = temp ; 
                     i = end_row_dec ; 
                     j = end_col_dec ; 
                 }
@@ -2145,6 +2146,7 @@ tree *function( char **buf , tree * node , int i , int j ){
                         }
                         temp->children[temp->num++]  = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
                         temp = temp->children[temp->num- 1 ]  ; 
+                        nested = temp ; 
                         i = end_row_dec ; 
                         j = end_col_dec ; 
                     }
@@ -2241,6 +2243,7 @@ tree *comp_1(char** buf , tree * node , int i , int j , int end_row , int end_co
                         }
                         node->children[node->num++] = select_query( i  , j , check ,  end_row_dec ,  end_col_dec  , 0  ) ; 
                         node = node->children[node->num -1 ] ; 
+                        nested = temp ; 
                         i = end_row_dec ; 
                         j = end_col_dec ; 
                     }
@@ -2346,6 +2349,7 @@ tree *comp_2(char** buf , tree * node , int i , int j , int end_row , int end_co
                         }
                         node->children[node->num++] = select_query( i  , j , check ,  end_row_dec ,  end_col_dec  , 0  ) ; 
                         node = node->children[node->num -1 ] ; 
+                        nested = temp ; 
                         i = end_row_dec ; 
                         j = end_col_dec ; 
                     }
@@ -2428,6 +2432,7 @@ tree *comp_2(char** buf , tree * node , int i , int j , int end_row , int end_co
                                                             }
                                                             temp->children[temp->num++]  = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
                                                             temp = temp->children[temp->num- 1 ]  ; 
+                                                            nested = temp ; 
                                                             i = end_row_dec ; 
                                                             j = end_col_dec ; 
                                                         }
@@ -2598,7 +2603,7 @@ tree *comp_2(char** buf , tree * node , int i , int j , int end_row , int end_co
 
 
 
-tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_col , int pain ){
+tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_col , int pain  , int having ){
 
     tree * start = node ; 
 
@@ -2632,6 +2637,7 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                             }
                             node->children[node->num++] = select_query( i  , j , check ,  end_row_dec ,  end_col_dec  , 0  ) ; 
                             node = node->children[node->num -1 ] ; 
+                            nested = temp ; 
                             i = end_row_dec ; 
                             j = end_col_dec ; 
                         }
@@ -2643,6 +2649,9 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                     }
 
                     else if (strcmp("ORDER" , buf[i][j]) == 0 ){
+                        if ( having. == 1 ){
+                            return start ; 
+                        }
                         tree *temp  ; 
                         tree *start_temp ; 
                         if (buf[i][j+1] != NULL ){
@@ -2682,6 +2691,7 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                                                     }
                                                     temp->children[temp->num++] = select_query( i  , j , check ,  end_row_dec ,  end_col_dec , 0  ) ; 
                                                     temp = temp->children[temp->num - 1]; 
+                                                    nested = temp ; 
                                                     i = end_row_dec ; 
                                                     j = end_col_dec ; 
                                                 }
@@ -2837,6 +2847,9 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
 
 
                     else if( strcmp("LIMIT") == 0 || strcmp("OFFSET") == 0 ){
+                        if ( having == 1 ){
+                            return start ; 
+                        }
                         node->children[node->num++]  = createNode("LIMIT") ; 
                         tree *temp = node->children[node->num - 1]  ; 
                         tree* start_temp = temp ; 
@@ -2866,6 +2879,7 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                                     }
                                     temp->children[node->num++] = select_query( i  , j , check ,  end_row_dec ,  end_col_dec , 0   ) ; 
                                     temp = temp->children[node->num - 1] ; 
+                                    nested = temp ; 
                                     i = end_row_dec ; 
                                     j = end_col_dec ; 
                                         }
@@ -2957,7 +2971,22 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                                 }
 
                                 if  (strcmp([buf[i][j]  , "HAVING"]) == 0 ){
-                                        // ka boom bitch 
+                                    int start_row = i ; 
+                                    int start_col = j ; 
+                                    while (strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "UNION") != 0 && strcmp(buf[i][j], "INTERSECT")!= 0 && strcmp(buf[i][j], "EXCEPT") != 0 && strcmp(buf[i][j], ")") != 0 && strcmp(buf[i][j], ";") != 0 && buf[i][j] != NULL ) { 
+                                            
+                                            if ( buf[i][j] == NULL ){
+                                                if (i+1 <= end_row){
+                                                    i = i+ 1 ; 
+                                                    j = 0  ; 
+                                                }
+                                            }
+                                            else { 
+                                                j++ ; 
+                                            }
+                                    }
+                                    temp->children[temp->num++] = comp_3( buf ,  temp , start_row, start_col,  i ,  j ,  pain  , 1 ) ; 
+                                    continue ; 
                                 }
 
 
@@ -2985,6 +3014,7 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                                                 }
                                                 temp->children[temp->num++] = select_query( i  , j , check ,  end_row_dec ,  end_col_dec  , 0  ) ; 
                                                 temp = temp->children[temp->num - 1 ] ; 
+                                                nested = temp ; 
                                                 i = end_row_dec ; 
                                                 j = end_col_dec ; 
                                             }
@@ -3176,6 +3206,7 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                                                             }
                                                             temp->children[temp->num++]  = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
                                                             temp = temp->children[temp->num- 1 ]  ; 
+                                                            nested = temp ; 
                                                             i = end_row_dec ; 
                                                             j = end_col_dec ; 
                                                         }
@@ -3345,7 +3376,7 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
 
             }
     }
-    return start 
+    return start  ; 
 
 }
 
@@ -3357,18 +3388,17 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
 
 
 
-tree* select_query(int row  , int col , int check  , int end_row , int end_col  ){
-        int compulsary = 3 ;  
+tree* select_query(int row  , int col , int check  , int end_row , int end_col , int pain   ){
         static int compulsion = 0 ; 
-        char * prev[300] ; 
         tree* start_of_tree ; 
-        tree* nested ; 
+        static tree* nested = NULL; 
         char **buf = proper_data.query ; 
-        if ( check == 1 ){
-            return NULL ; 
-        }
         for ( int i = row ; i <= end_row  ; i++ ){
         for ( int j = col ; j <= end_col   ; j++ ){
+
+            if ( check == 1 ){
+                return NULL ; 
+            }
 
             if ( i == row && j == col ){
               tree* node =  createNode(buf[0]) ; 
@@ -3380,11 +3410,6 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
             }
 
             else if ( buf[i][j] == ';'){
-                if ( compulsion < compulsary){
-                        status_msg_input("the query is wrong ") ; 
-                        check = 1 ; 
-                        return NULL  ;   
-                }
                 return node   ; 
             }
 
@@ -3393,6 +3418,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                     if ( buf[i][j+1] == 'AS' && j+1 <= end_col ){
                         if ( buf[i][j+2] == NULL && j+2 <= end_col ){
                             status_msg_input("the query is wrong ") ; 
+                            check = 1 ; 
                             return NULL ; 
                         }
                         if ( nested != NULL ){
@@ -3406,6 +3432,40 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
             }
 
 
+            else if ( strstr(buf[i][j] , "UNION") == 0 || strstr(buf[i][j] , "EXCEPT") == 0 || strstr(buf[i][j] , "INTERSECT") == 0  ){
+                int pain = 1 ; 
+                char *str ; 
+                str[0] = buf[i][j] ; 
+                if ( buf[i][j] == NULL ){
+                    if (i+1 <= end_row){
+                        i = i+ 1 ; 
+                        j = 0  ; 
+                    }
+                }
+                else { 
+                    j++ ; 
+                }
+                if ( buf[i][j] == "ALL"){
+                str[1] = buf[i][j] ; 
+                }
+
+                tree* superior = createNode(str) ; 
+                superior->children[superior->num] = start_of_tree ; 
+                superior->num++ ; 
+                start_of_tree = superior ; 
+                if ( buf[i][j] == NULL ){
+                    if (i+1 <= end_row){
+                        i = i+ 1 ; 
+                        j = 0  ; 
+                    }
+                }
+                else { 
+                    j++ ; 
+                }
+
+             start_of_tree->children[start_of_tree->num++] =  select_query(int row  , int col , int check  , int end_row , int end_col , int pain   ) ; 
+
+            }
 
 
             else if (compulsion == 1){
@@ -3532,7 +3592,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
                 }
                 else { 
                     if ( pain == 0 ){
-                    node->children[node->num++] = comp_3(buf , node , start_row , start_col , i , j , pain ) ; 
+                    node->children[node->num++] = comp_3(buf , node , start_row , start_col , i , j , pain  , 0 ) ; 
                     compulsion++ ; 
                     node->children[node->num++]= createNode(buf[i][j]) ; 
                     node = node->children[node->num - 1 ] ;  
@@ -3551,6 +3611,9 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col  
     return start_of_tree ; 
 
 }
+
+
+
 
 
 
