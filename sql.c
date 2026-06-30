@@ -2151,9 +2151,38 @@ tree *function( char **buf , tree * node , int i , int j ){
                         j = end_col_dec ; 
                     }
                     else {
-                        status_msg_input("the query is wrong ") ; 
-                        check = 1 ; 
-                        return NULL  ; 
+                            while ( buf[i][j] != ')'){
+                                  if ( priority(buf[i][j]) != 0  ){
+                                    int temp_row = i ; 
+                                    int temp_col = j ; 
+                                    while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                    if ( buf[i][j] == NULL ){
+                                        if ( i+ 1 <= end_row){
+                                        i++ ; 
+                                        j = 0 ; 
+                                    }
+                                    else { 
+                                        j++ ; 
+                                    }
+                                    }
+                                    }
+                                    node->children[node->num++ ]  = expression(buf , node ,  i ,  j  ,  temp_row ,  temp_col ) ; 
+                                }
+                                else  {
+                                    if (if_syntax(buf[i][j]) == false ){
+                                            if ( buf[i][j] == ','){
+                                                node->num++ ; 
+                                                continue ; 
+                                            }
+                                            node->children[node->num++] = make_leaf( buf[i][j]  , i , j ) ; 
+                                        }
+                                        else { 
+                                            status_msg_input("the query is wrong ") ; 
+                                            check = 1 ; 
+                                                return NULL ;   
+                                        }
+                                } 
+                            }
                     }
             }
 
@@ -2248,9 +2277,38 @@ tree *comp_1(char** buf , tree * node , int i , int j , int end_row , int end_co
                         j = end_col_dec ; 
                     }
                     else {
-                            status_msg_input("the query is wrong ") ; 
-                                check = 1 ; 
-                            return NULL  ; 
+                            while ( buf[i][j] != ')'){
+                                  if ( priority(buf[i][j]) != 0  ){
+                                    int temp_row = i ; 
+                                    int temp_col = j ; 
+                                    while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                    if ( buf[i][j] == NULL ){
+                                        if ( i+ 1 <= end_row){
+                                        i++ ; 
+                                        j = 0 ; 
+                                    }
+                                    else { 
+                                        j++ ; 
+                                    }
+                                    }
+                                    }
+                                    node->children[node->num++ ]  = expression(buf , node ,  i ,  j  ,  temp_row ,  temp_col ) ; 
+                                }
+                                else  {
+                                    if (if_syntax(buf[i][j]) == false ){
+                                            if ( buf[i][j] == ','){
+                                                node->num++ ; 
+                                                continue ; 
+                                            }
+                                            node->children[node->num++] = make_leaf( buf[i][j]  , i , j ) ; 
+                                        }
+                                        else { 
+                                            status_msg_input("the query is wrong ") ; 
+                                            check = 1 ; 
+                                                return NULL ;   
+                                        }
+                                } 
+                            }
                         }
                     }
 
@@ -2354,9 +2412,38 @@ tree *comp_2(char** buf , tree * node , int i , int j , int end_row , int end_co
                         j = end_col_dec ; 
                     }
                     else {
-                            status_msg_input("the query is wrong ") ; 
-                                check = 1 ; 
-                            return NULL  ; 
+                            while ( buf[i][j] != ')'){
+                                  if ( priority(buf[i][j]) != 0  ){
+                                    int temp_row = i ; 
+                                    int temp_col = j ; 
+                                    while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                    if ( buf[i][j] == NULL ){
+                                        if ( i+ 1 <= end_row){
+                                        i++ ; 
+                                        j = 0 ; 
+                                    }
+                                    else { 
+                                        j++ ; 
+                                    }
+                                    }
+                                    }
+                                    node->children[node->num++ ]  = expression(buf , node ,  i ,  j  ,  temp_row ,  temp_col ) ; 
+                                }
+                                else  {
+                                    if (if_syntax(buf[i][j]) == false ){
+                                            if ( buf[i][j] == ','){
+                                                node->num++ ; 
+                                                continue ; 
+                                            }
+                                            node->children[node->num++] = make_leaf( buf[i][j]  , i , j ) ; 
+                                        }
+                                        else { 
+                                            status_msg_input("the query is wrong ") ; 
+                                            check = 1 ; 
+                                                return NULL ;   
+                                        }
+                                } 
+                            }
                         }
                     }
 
@@ -2642,9 +2729,38 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                             j = end_col_dec ; 
                         }
                         else {
-                                status_msg_input("the query is wrong ") ; 
-                                    check = 1 ; 
-                                return NULL  ; 
+                             while ( buf[i][j] != ')'){
+                                  if ( priority(buf[i][j]) != 0  ){
+                                    int temp_row = i ; 
+                                    int temp_col = j ; 
+                                    while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                    if ( buf[i][j] == NULL ){
+                                        if ( i+ 1 <= end_row){
+                                        i++ ; 
+                                        j = 0 ; 
+                                    }
+                                    else { 
+                                        j++ ; 
+                                    }
+                                    }
+                                    }
+                                    node->children[node->num++ ]  = expression(buf , node ,  i ,  j  ,  temp_row ,  temp_col ) ; 
+                                }
+                                else  {
+                                    if (if_syntax(buf[i][j]) == false ){
+                                            if ( buf[i][j] == ','){
+                                                node->num++ ; 
+                                                continue ; 
+                                            }
+                                            node->children[node->num++] = make_leaf( buf[i][j]  , i , j ) ; 
+                                        }
+                                        else { 
+                                            status_msg_input("the query is wrong ") ; 
+                                            check = 1 ; 
+                                                return NULL ;   
+                                        }
+                                } 
+                            }
                             }
                     }
 
@@ -2884,9 +3000,38 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
                                     j = end_col_dec ; 
                                         }
                                 else {
-                                        status_msg_input("the query is wrong ") ; 
-                                            check = 1 ; 
-                                        return NULL  ; 
+                                    while ( buf[i][j] != ')'){
+                                        if ( priority(buf[i][j]) != 0  ){
+                                            int temp_row = i ; 
+                                            int temp_col = j ; 
+                                            while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                            if ( buf[i][j] == NULL ){
+                                                if ( i+ 1 <= end_row){
+                                                i++ ; 
+                                                j = 0 ; 
+                                            }
+                                            else { 
+                                                j++ ; 
+                                            }
+                                            }
+                                            }
+                                            node->children[node->num++ ]  = expression(buf , node ,  i ,  j  ,  temp_row ,  temp_col ) ; 
+                                        }
+                                        else  {
+                                            if (if_syntax(buf[i][j]) == false ){
+                                                    if ( buf[i][j] == ','){
+                                                        node->num++ ; 
+                                                        continue ; 
+                                                    }
+                                                    node->children[node->num++] = make_leaf( buf[i][j]  , i , j ) ; 
+                                                }
+                                                else { 
+                                                    status_msg_input("the query is wrong ") ; 
+                                                    check = 1 ; 
+                                                        return NULL ;   
+                                                }
+                                        } 
+                                    }
                                     }
                             }
 
@@ -3611,9 +3756,6 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
     return start_of_tree ; 
 
 }
-
-
-
 
 
 
