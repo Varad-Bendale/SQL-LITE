@@ -96,3 +96,40 @@ all of them were space line or not that check is kind of important so yeah it is
 
 One of minor mistake which caused me problem was there was this dataint thing there the seperator was passed & this was not defined in the seperator
  function so its was trying to find the integer for the & as well so yeah kind of boo boo hey 
+
+
+
+okay comming on the main parser of the queries the select commands see its quite straight forward okay first matter of action 
+
+
+
+
+okay lets talk about the nested queries as well see there is possiblity that we have query inside the query so we need to catch it up // okay continue 
+fronm here cant write it any more // 
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+see we have the functions very comman the sql like count sum avg and so these need to properly insterted in the ast so simply created a function made
+ the main node of the thing 2 steps ahead cause we need to avoid the braces and rthen we go inside so simply there can be expressions in the thing or
+ there can be nested queries so we need to manage those so yeah added them loop goes on and we get all of them covered so yeah not much to talk about 
+this one straightforward as that errors were also like normal " and ' these ones and the null werent taken in the account nothing that much of major 
+so yeah 
+
+
+
+
+see we often have the expressions used liek a+b AND b*c is not null 
+so here a proper tree needs to be formed with the thing so a function is been made for it which picks up these makes the node and then we add the
+ operators and the operands in the stack and as per the operators come we look for the prioirty of the operator and as per the priority and the
+ number of oeprands needed we pop it out and make a proper tree out of it simple as that and in the end added the flush if the same priotity of the 
+operators come then to safegaurd them as well so yeah 
+the errors i would love to speak about were 
+everywhere the issue of the != and strcmp was there i kind of used it eveerywhere had to change everything and then in the expression more the issues 
+were like i like hardcoded the thing like see != are two different seeprators but they are cosdiered as one the same manenr like is null or is not null 
+like these how different these are i kind of have kept it like hardcoded if both are the pirority ones then attach it directly which kind of backfired
+ let me give you the example like is null is there now here the null is considered as the part of the thing but at the time of liek != null here the 
+null is a operand here which was getting kicked of so yeah a problem also the issues came with the number of operands to be taken as well few of the
+ functions dont take 2 operands whereas i coded it that way for same to each so it was breaking so had to like complelty define the thing for the 
+specific functions giving us what the amount of operands need to be considered and then one more function which i kinda of didnt condidered here was 
+the nested queries i didnt really thougth it would be used but yeah it was a bit important so i added that as well a smaller bug as well whatever the 
+recursive funcrtion which were called werent check with the null so had to add those functions as well 
