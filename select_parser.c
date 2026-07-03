@@ -1,32 +1,35 @@
 typedef struct Tree_def {
     char* comp; 
-    struct Tree* left;
-    struct Tree* right;
-    struct Tree** children;   
+    struct Tree_def** children;   
     char* as  ; 
     char **direction  ; 
-    int child_count;
-	int line;                 
+    int line;                 
     int col;
     int num  ; 
 } Tree_def;
 
-
-struct Tree_def tree  ; 
+typedef Tree_def tree  ; 
 
 tree* createNode( char* comp) {
     tree* node = malloc(sizeof(tree));
+    if (node == NULL) {
+        return NULL;   
+    }
     if( comp != NULL  ){
-    node->value = strdup(comp) ; 
+        node->comp = strdup(comp) ; 
+    }
+    else { 
+        node->comp = NULL ; 
     }
     node->as = NULL ; 
-    node->children = NULL;
+    node->children = calloc(300, sizeof(tree*));
+    
     node->direction = NULL ;  
-    node->child_count = 0;
     node->num = 0  ; 
+    node->col = 0 ; 
+    node->line = 0 ; 
     return node;
 }
-
 
 char *SQL_functions[] = {
   "COUNT", "SUM", "AVG", "MIN", "MAX", "STDDEV", "VARIANCE",
@@ -60,11 +63,15 @@ bool if_function( char* word ){
 
 Tree_def* make_leaf(char* value , int row , int col ) {
     Tree_def* n = malloc(sizeof(Tree_def));
-    n->comp = strdup(value);
+    if (n == NULL) {
+        return NULL;   
+    }
+    if ( value != NULL ){
+      n->comp = strdup(value);
+    }
     n->as = NULL;
-    n->children = NULL;
+    n->children[300] = NULL;
     n->direction = NULL ; 
-    n->child_count = 0 ; 
     n->line = row ; 
     n->col = col;
     return n;
@@ -205,10 +212,9 @@ int priority(char *string){
     else if (strcmp("NOT" , string ) == 0  ){
         return 4 ; 
     }
-    else if ( strcmp("BETWEEN" , string ) == 0  || strcmp("IN" , string ) == 0  || strcmp("LIKE" , string ) == 0  || strcmp("IS NULL" , string ) == 0  ||strcmp("EXISTS" , string ) == 0 ){
-        return 5 ; 
+    else if (strcmp("BETWEEN", string) == 0 || strcmp("IN", string) == 0 || strcmp("LIKE", string) == 0 || strcmp("IS", string) == 0 || strcmp("EXISTS", string) == 0 || strcmp("IS NULL", string) == 0 || strcmp("IS NOT NULL", string) == 0 || strcmp("NOT IN", string) == 0 || strcmp("NOT LIKE", string) == 0 || strcmp("NOT BETWEEN", string) == 0){
+         return 5;
     }
-
     else if (  strcmp("=" , string ) == 0  || strcmp("!=" , string ) == 0  || strcmp("<>" , string ) == 0  || strcmp(">" , string ) == 0  || strcmp("<" , string ) == 0  || strcmp(">=" , string ) == 0  || strcmp("<=" , string ) == 0  ){
         return 6 ; 
     }
@@ -230,155 +236,120 @@ int priority(char *string){
 
 
 
-tree* expression(char **buf , tree * node , int i , int j  , int end_row , int end_col   , int pain ){
-        char * operands[300] ; 
-        int start_row =  i  ; 
-        int start_col = j ; 
-        char * operators[300] ; 
-        int g_temp = 0 ; 
-        char *string_temp; 
-        tree *exp_tree = node ; 
-        int operator_top = 0 ; 
-        int operand_top = 0 ; 
-        tree * prev_tree = NULL ; 
-        int first = 0 ; 
-        if ( priority(buf[i][j]) != 0  ){
-        while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
-            if ( priority(buf[i][j]) != 0  ){
-                if (j+1 <=end_col &&  priority(buf[i][j+1]) != 0 ){
-                    char concat_buf[600] ;       
-                    strcpy(concat_buf, buf[i][j]) ;
-                    strcat(concat_buf, buf[i][j+1]) ;
-                    string_temp = concat_buf ;
-                    top++ ;
-                }
-                else { 
-                    string_temp = buf[i][j] ; 
-                    top++ ; 
-                }
-                if  (first == 0 ){
-                    if ( j-1 >= start_col  ){
-                        operands[operand_top] = buf[i][j-1] ; 
-                    }
-                    else { 
-                        if ( i >= end_row ){
-                            int size = 0  ; 
-                            for ( int k = 0 ; buf[i][k]!= NULL ; k++ ){
-                                size++ ; 
-                            }
-                        operands[operand_top] = buf[i-1][size] ; 
-                        }
+tree* expression(char ***buf , tree * node , int i , int j  , int end_row , int end_col  ){
+    char string_temp_buf[600];
+    char * operands[300] ; 
+    int start_row =  i  ; 
+    int start_col = j ; 
+    char * operators[300] ; 
+    char *string_temp; 
+    int operator_top = 0 ; 
+    int operand_top = 0 ; 
+    tree * prev_tree[300]  ; 
+    int prev_tree_top = 0 ; 
+    int first = 0 ; 
+    int check = 0 ;
 
-                    }
-                    operand_top++ ; 
+    while ( buf[i][j] != NULL && strcmp(buf[i][j], ";") != 0  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+        if (priority(buf[i][j]) != 0) {    
+            if ( j+1 <= end_col &&  priority(buf[i][j]) != 0  && strcmp(buf[i][j], "IS") == 0 && strcmp(buf[i][j+1], "NULL") == 0   ){
+                string_temp = "IS NULL" ; 
+                j = j +1 ; 
+            }
+            else if (j+1 <= end_col &&  priority(buf[i][j]) != 0  && strcmp(buf[i][j], "IS") == 0 && strcmp(buf[i][j+1], "NOT") == 0  && strcmp(buf[i][j+1], "NULL") == 0  ){
+                string_temp = "IS NOT NULL" ; 
+                j = j+2 ; 
+            }
+            else if (j+1 <= end_col &&  priority(buf[i][j]) != 0  && strcmp(buf[i][j], "NOT") == 0 && strcmp(buf[i][j+1], "IN") == 0   ){
+                string_temp = "NOT IN" ; 
+                j = j +1 ; 
+            }
+            else if ( j+1 <= end_col && priority(buf[i][j]) != 0  && strcmp(buf[i][j], "NOT") == 0 && strcmp(buf[i][j+1], "LIKE") == 0   ){
+                string_temp = "NOT LIKE" ; 
+                    j = j +1 ; 
+            }
+            else if (j+1 <= end_col &&  priority(buf[i][j]) != 0  && strcmp(buf[i][j], "NOT") == 0 && strcmp(buf[i][j+1], "BETWEEN") == 0   ){
+                string_temp = "NOT BETWEEN" ; 
+                j = j +1 ; 
+            }
+            else if (j + 1 <= end_col ){
+                char merged[10] ; 
+                strcpy(merged, buf[i][j]);
+                strcat(merged, buf[i][j + 1]);
+                if ( priority(merged) != 0 ){
+                    string_temp = strdup(merged) ; 
+                    j += 1  ; 
                 }
-                if ( operator_top == 0 ){
-                    operators[operator_top] = string_temp ; 
-                }
-                else { 
-                    if  ( priority(string_temp) <= priority(operators[operator_top] ) ){
-                    while ( priority(string_temp) <= priority(operators[operator_top]  )){
-                        tree * new  = createNode(string_temp ) ; 
-                        operator_top-- ; 
-                        int pal = 0 ; 
-                        while ( pal < 2 ){
-                            if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
-                                new->children[new->num++]  = prev_tree ; 
-                            }
-                            else { 
-                                new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
-                            }
-                            pal++ ; 
-                            operand_top-- ; 
-                        }
-
-                        exp_tree->children[exp_tree->num++]  = new ; 
-                        prev_tree = new ; 
-                        operand_top++ ; 
-                        operands[operand_top] = "varad" ; 
-                    }
-                    operator_top++ ; 
-                    operators[operator_top] = string_temp ; 
-                }
-                    else  {
-                        operator_top++ ; 
-                        operators[operator_top] = string_temp ; 
-                    }
+                else {
+                    string_temp = strdup(buf[i][j]);  
                 }
             }
             else { 
-                operands[operand_top] = buf[i][j] ; 
-                operand_top++ ; 
+                   string_temp = strdup(buf[i][j]);
             }
-            if ( buf[i][j] == NULL){
-                if ( i +1 < end_row){
-                i++ ; 
+
+             if  (first == 0 && j == start_col ){
+                 if ( i > start_row ){
+                        int size = 0  ; 
+                        for ( int k = 0 ; buf[i - 1][k] != NULL ; k++ ){
+                            size++ ; 
+                        }
+                        if ( size > 0 ){
+                          operands[operand_top++] = buf[i-1][size - 1 ] ; 
+                        }
+                    }
                 }
-                else { 
-                    break ; 
+            first = 1 ; 
+
+            if ( operator_top == 0 ){
+                operators[operator_top++] = string_temp ;                                            
+            }
+            else { 
+                if  ( priority(string_temp) <= priority(operators[operator_top - 1 ]) ){
+                    while ( operator_top > 0 && priority(string_temp) <= priority(operators[operator_top - 1 ]  )){
+                        char *oper = operators[operator_top - 1] ; 
+                        tree * new  = createNode(oper) ; 
+                        operator_top-- ; 
+                        int pal = 0 ; 
+                        int num_temp = 2  ; 
+                        if ( strcmp(oper, "NOT") == 0 ||strcmp(oper, "IS NULL") == 0 || strcmp(oper, "IS NOT NULL") == 0 )  {
+                            num_temp = 1 ; 
+                        }
+                        while ( pal < num_temp  ){
+                            operand_top-- ;     
+                            fflush(stdout);
+                            if ( operands[operand_top] ==  NULL){
+                                new->children[num_temp - 1 - pal]  = prev_tree[--prev_tree_top] ; 
+                            }
+                            else { 
+                                new->children[num_temp - 1 - pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+                            }
+                            pal++ ; 
+                        }
+                        new->num = num_temp;
+                        prev_tree[prev_tree_top++] = new;
+                        operands[operand_top] = NULL;
+                        operand_top++;
+                    }
+                    operators[operator_top++] = string_temp ; 
+                }
+                else  {
+                    operators[operator_top++] = string_temp ; 
                 }
             }
-            j++ ; 
-
         }
-        while (operator_top > 0) {
-            operator_top-- ; 
-            char** new = createNode(operators[operator_top]);
-            int pal = 0 ; 
-                while ( pal < 2 ){
-                    if ( strcmp(operands[operand_top] ,  "varad") == 0  ){
-                        new->children[new->num++]  = prev_tree ; 
-                    }
-                    else { 
-                        new->children[pal] = make_leaf(operands[operand_top] , i  ,  j ) ; 
-                    }
-                    pal++ ; 
-                    operand_top-- ; 
-                }
-            prev_tree = new ; 
-            operand_top++ ; 
-            operands[operand_top] = new_node;
-        }
-        
-        if ( j-1 >= col ){
-            j = j - 1 ;
-        }
-        return exp_tree ; 
-
-
-    }
-    return NULL ; 
-
-}
-
-
-
-
-tree *function( char **buf , tree * node , int i , int j ){
-        tree* temp = node ; 
-        tree *start = temp ; 
-        while ( temp->children[temp->num- 1 ]  != NULL){
-            temp = temp->children[temp->num- 1 ]  ; 
-        }
-        temp->children[temp->num++]  = createNode(buf[i][j]) ; 
-        if ( buf[i][j+1] != NULL ){
-            j++ ; 
-        }
-
-
-
-        while ( buf[i][j] != ')'){
-            if ( buf[i][j] == '(' ){
-                    if ( j-1 > col && strstr('SELECT' , buf[i][j-1]) == 0  ){
+        else { 
+                if ( strcmp(buf[i][j] , "(") == 0  ){
+                    if ( j-1 > 0 && strcmp(buf[i][j+1] , "SELECT" ) == 0  ){
                         int end_col_dec  = 0 ; 
                         int end_row_dec  = 0 ; 
                         int braces = 1 ; 
                         for ( int m = i ; m <= end_row ; m++  ){
                             for ( int n = j+1 ; n <= end_col ; n++  ){
-                                if ( buf[m][n] =='(' ){
+                                if ( strcmp(buf[m][n] , "(") == 0  ){
                                     braces++ ; 
                                 }
-                                else if ( buf[m][n] == ')'){
+                                else if ( strcmp(buf[m][n] , ")") == 0 ){
                                     braces-- ; 
                                 }
                                 if ( braces == 0 ){
@@ -387,85 +358,265 @@ tree *function( char **buf , tree * node , int i , int j ){
                                     break ; 
                                 }
                             }
+                                if ( braces == 0 ){
+                                    break ; 
+                                }
+
                         }
-                        temp->children[temp->num++]  = select_query( i  , j , check , int end_row_dec , int end_col_dec  ) ; 
-                        temp = temp->children[temp->num- 1 ]  ; 
-                        nested = temp ; 
+                        tree * just_there  =  select_query( i  , j , check ,  end_row_dec ,  end_col_dec  ); 
+                        if (just_there != NULL  ){
+                                prev_tree[prev_tree_top++] = just_there ;
+                              operands[operand_top++] = NULL ;
+                        }
                         i = end_row_dec ; 
                         j = end_col_dec ; 
                     }
                     else {
-                            while ( buf[i][j] != ')'){
-                                  if ( priority(buf[i][j]) != 0  ){
-                                    int temp_row = i ; 
-                                    int temp_col = j ; 
-                                    while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                        operands[operand_top] = buf[i][j] ; 
+                        operand_top++ ; 
+                    }
+                }
+                else {
+                    operands[operand_top] = buf[i][j] ; 
+                    operand_top++ ; 
+                }
+        }
+            if ( buf[i][j] == NULL){
+                if ( i +1 < end_row){
+                i++ ; 
+                j = 0 ; 
+                }
+                else { 
+                    break ; 
+                }
+            }
+            else { 
+                j++ ; 
+            }
+    }
+
+
+    while (operator_top > 0) {
+        char *oper = operators[operator_top - 1] ; 
+        tree * new  = createNode(oper) ; 
+        operator_top-- ; 
+        int pal = 0 ; 
+        int num_temp = 2   ; 
+        if ( strcmp(oper, "NOT") == 0 ||strcmp(oper, "IS NULL") == 0 || strcmp(oper, "IS NOT NULL") == 0 )  {
+            num_temp = 1 ; 
+        }
+        while ( pal < num_temp  ){
+            operand_top-- ;     
+            if ( operands[operand_top] ==  NULL){
+                new->children[num_temp - 1 - pal]  = prev_tree[--prev_tree_top] ; 
+            }
+            else { 
+                new->children[num_temp - 1 - pal ] = make_leaf(operands[operand_top] , i  ,  j ) ; 
+            }
+
+            pal++ ; 
+        }
+         new->num = num_temp;
+        prev_tree[prev_tree_top++] = new;
+        operands[operand_top] = NULL;
+        operand_top++;
+    }
+    tree*exp_tree = prev_tree[prev_tree_top - 1 ] ; 
+    if ( j-1 >= start_col ){
+        j = j - 1 ;
+    }
+    return exp_tree ; 
+}
+
+
+
+
+
+
+
+
+tree *function( char ***buf , tree * node , int i , int j  , int end_row , int end_col ){
+         tree* temp = node ; 
+        temp->children[temp->num++]  = createNode(buf[i][j]) ; 
+        temp = temp->children[temp->num- 1 ] ; 
+        tree *start = temp ; 
+        int check = 0 ; 
+        int pal = 0 ; 
+        while ( pal < 2 ){
+        if ( buf[i][j+1] != NULL ){
+            j++ ; 
+        }
+        pal++ ; 
+         }
+
+
+        while ( strcmp(buf[i][j] , ")") != 0 ){
+             if ( strcmp(buf[i][j] , "(") == 0  ){
+                    if ( j-1 > 0 && strcmp(buf[i][j+1] , "SELECT" ) == 0  ){
+                        int end_col_dec  = 0 ; 
+                        int end_row_dec  = 0 ; 
+                        int braces = 1 ; 
+                        for ( int m = i ; m <= end_row ; m++  ){
+                            for ( int n = j+1 ; n <= end_col ; n++  ){
+                                if ( strcmp(buf[m][n] , "(") == 0  ){
+                                    braces++ ; 
+                                }
+                                else if ( strcmp(buf[m][n] , ")") == 0 ){
+                                    braces-- ; 
+                                }
+                                if ( braces == 0 ){
+                                    end_row_dec = m ; 
+                                    end_col_dec = n ; 
+                                    break ; 
+                                }
+                            }
+                                if ( braces == 0 ){
+                                    break ; 
+                                }
+
+                        }
+                        tree * just_there  =  select_query( i  , j , check ,  end_row_dec ,  end_col_dec  ); 
+                        if (just_there != NULL  ){
+                              temp->children[temp->num++]  = just_there ; 
+                        }
+                        nested  = temp ; 
+                        temp = temp->children[temp->num- 1 ]  ; 
+                        i = end_row_dec ; 
+                        j = end_col_dec ; 
+                    }
+                    else {
+                        while ( strcmp(buf[i][j] , ")") != 0 ){
+                                if ( priority(buf[i][j]) != 0  ){
+                                int temp_row = i ; 
+                                int temp_col = j ; 
+                                while ( buf[i][j] != NULL && strcmp(buf[i][j] , ";") != 0  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
                                     if ( buf[i][j] == NULL ){
                                         if ( i+ 1 <= end_row){
                                         i++ ; 
                                         j = 0 ; 
                                     }
                                     else { 
-                                        j++ ; 
+                                        break ; 
                                     }
                                     }
+                                    else {
+                                        j++ ;
                                     }
-                                    node->children[node->num++ ]  = expression(buf , node ,  i ,  j  ,  temp_row ,  temp_col ) ; 
+                                }
+                                tree *  just_there =  expression(buf , temp ,  temp_row ,  temp_col  ,  i ,  j ) ; 
+                                if (just_there != NULL ){
+                                temp->children[temp->num++ ]  = just_there ; 
+                                }
                                 }
                                 else  {
-                                    if (if_syntax(buf[i][j]) == false ){
-                                            if ( buf[i][j] == ','){
-                                                node->num++ ; 
-                                                continue ; 
+                                if (if_syntax(buf[i][j]) == false ){
+                                        if ( strcmp(buf[i][j] , ",") == 0 ){
+                                            if ( buf[i][j] == NULL){
+                                                if ( buf[i+1][0] != NULL ){
+                                                i++ ;
+                                                j = 0 ;
+                                            } else {
+                                                break ;
                                             }
-                                            node->children[node->num++] = make_leaf( buf[i][j]  , i , j ) ; 
                                         }
-                                        else { 
-                                            status_msg_input("the query is wrong ") ; 
-                                            check = 1 ; 
-                                                return NULL ;   
+                                        else {
+                                            j++ ; 
                                         }
-                                } 
-                            }
+                                                continue ;
+                                        }
+                                        temp->children[temp->num++] = make_leaf( buf[i][j]  , i , j ) ; 
+                                    }
+                                    else { 
+                                        check = 1 ; 
+                                            return NULL ;   
+                                    }
+                            } 
+                        }
                     }
             }
-
 
             else { 
                     if ( priority(buf[i][j]) != 0  ){
                         int temp_row = i ; 
                         int temp_col = j ; 
-                        while ( buf[i][j] != ';'  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
-                        if ( buf[i][j] == NULL ){
-                            if ( i+ 1 <= end_row){
-                            i++ ; 
-                            j = 0 ; 
-                        }
-                        else { 
-                            j++ ; 
-                        }
-                        }
-                        }
-                        temp->children[temp->num++]   = expression(buf , temp ,  i ,  j  ,  temp_row ,  temp_col ) ; 
-                        
-                    }
-                    else  if ( temp->children[temp->num- 1 ]  == NULL ){
-                        if (if_syntax(buf[i][j]) == false ){
-                                if ( buf[i][j] == ','){
-                                    node->num++ ; 
-                                    continue ; 
-                                }
-                                node->children[node->num] = make_leaf( buf[i][j]  , i , j ) ; 
-                                node->num++ ; 
+                        while (buf[i][j] != NULL &&  strcmp(buf[i][j] , ";") != 0  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                            if ( buf[i][j] == NULL ){
+                                if ( i+ 1 <= end_row){
+                                i++ ; 
+                                j = 0 ; 
                             }
                             else { 
-                                status_msg_input("the query is wrong ") ; 
+                                break ; 
+                            }
+                            }
+                            else {
+                                j++ ;
+                            }
+                        }
+                        tree*  just_there =  expression(buf , temp ,  temp_row ,  temp_col  ,  i ,  j ) ; 
+                        if (just_there != NULL ){
+                        temp->children[temp->num++ ]  = just_there ; 
+                        }
+                    }         
+                    else {
+                        if (if_syntax(buf[i][j]) == false ){
+                                if ( strcmp(buf[i][j] , ",") == 0 ){
+                                    if (  buf[i][j] == NULL  ) {
+                                         if ( buf[i+1][0] != NULL ){
+                                        i++ ;
+                                        j = 0 ;
+                                    } 
+                                }
+                                else { 
+                                    j++ ; 
+                                }
+                                        continue ;
+                                }
+                                 if (buf[i][j+1] != NULL && priority(buf[i][j+1]) != 0) {
+                                    int temp_row = i ; 
+                                    int temp_col = j ; 
+                                    while (buf[i][j] != NULL &&  strcmp(buf[i][j] , ";") != 0  && strcmp(buf[i][j], "ON") != 0 && strcmp(buf[i][j], "OFFSET") != 0 && strcmp(buf[i][j], "LIMIT") != 0 && strcmp(buf[i][j], "ORDER") != 0 && strcmp(buf[i][j], "HAVING") != 0 && strcmp(buf[i][j], "GROUP") != 0&& strcmp(buf[i][j], "WHERE") != 0 && strcmp(buf[i][j], "FROM") != 0 && strcmp(buf[i][j], ")") != 0 ){
+                                        if ( buf[i][j] == NULL ){
+                                            if ( i+ 1 <= end_row){
+                                            i++ ; 
+                                            j = 0 ; 
+                                        }
+                                        else { 
+                                            break ; 
+                                        }
+                                        }
+                                        else {
+                                            j++ ;
+                                        }
+                                    }
+                                    tree*  just_there =  expression(buf , temp ,  temp_row ,  temp_col  ,  i ,  j ) ; 
+                                    if (just_there != NULL ){
+                                    temp->children[temp->num++ ]  = just_there ; 
+                                    }
+                                }
+                                else {
+                                       temp->children[temp->num++] = make_leaf( buf[i][j]  , i , j ) ; 
+                                }
+                            }
+                            else { 
                                 check = 1 ; 
-                                    return NULL ;   
+                                return NULL ;   
                             }
                     }                    
             }
-         start->children[start->num- 1 ]   = start ; 
+            fflush(stdout);
+            if (buf[i][j+1] != NULL) {
+                j++ ;
+            }
+            else {
+                if (buf[i+1][0] != NULL) {
+                    i++ ;
+                    j = 0 ;
+                }
+                else {
+                    break ;
+                }
+            }
     }
     return start ; 
 }
@@ -477,16 +628,14 @@ tree *function( char **buf , tree * node , int i , int j ){
 
 
 
-
-
-tree *comp_1(char** buf , tree * node , int i , int j , int end_row , int end_col ){
+tree *comp_1(char*** buf , tree * node , int i , int j , int end_row , int end_col ){
 
     tree * start = node ; 
 
 
     while ( i <= end_row){
        while ( j <= end_col ) {
-            if (  strstr('FROM' , buf[i][j]) == 0  ) {
+            if (  strcmp('FROM' , buf[i][j]) == 0  ) {
                 return start ; 
             }
             else { 
@@ -1776,12 +1925,11 @@ tree *comp_3(char** buf , tree * node , int i , int j , int end_row , int end_co
 
 
 
-
-tree* select_query(int row  , int col , int check  , int end_row , int end_col , int pain   ){
+tree* select_query(int row  , int col , int* check  , int end_row , int end_col , int pain   ){
         static int compulsion = 0 ; 
         tree* start_of_tree ; 
         static tree* nested = NULL; 
-        char **buf = proper_data.query ; 
+        char ***buf = proper_data.query ; 
         for ( int i = row ; i <= end_row  ; i++ ){
         for ( int j = col ; j <= end_col   ; j++ ){
 
@@ -1790,28 +1938,30 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
             }
 
             if ( i == row && j == col ){
-              tree* node =  createNode(buf[0]) ; 
-              start_of_tree = node ; 
-              prev = buf[0] ;
-              compulsion++ ;  
-              prev = 'SELECT' ; 
-              continue ; 
+                if (  strcmp(buf[i][j], "SELECT")==0  ){
+                    tree* node =  createNode(buf[0]) ; 
+                    start_of_tree = node ; 
+                    compulsion++ ;  
+                    continue ; 
+                }
             }
 
-            else if ( buf[i][j] == ';'){
-                return node   ; 
+            else if ( strcmp(buf[i][j], ";")==0 ){
+                return NULL   ; 
             }
 
-            else if ( buf[i][j] == ')' && !if_function(prev)) {
+
+
+            else if ( strcmp(buf[i][j], ")")==0  && !if_function(prev)) {
                 if (buf[i][j+1] != NULL  ){
-                    if ( buf[i][j+1] == 'AS' && j+1 <= end_col ){
+                    if ( strcmp(buf[i][j], "AS")==0 && j+1 <= end_col ){
                         if ( buf[i][j+2] == NULL && j+2 <= end_col ){
                             status_msg_input("the query is wrong ") ; 
                             check = 1 ; 
                             return NULL ; 
                         }
                         if ( nested != NULL ){
-                        nested->as = buf[i][j+2] ; 
+                        nested->as = strdup(buf[i][j+2] )  ; 
                         }
                     }
                 }
@@ -1821,9 +1971,9 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
             }
 
 
-            else if ( strstr(buf[i][j] , "UNION") == 0 || strstr(buf[i][j] , "EXCEPT") == 0 || strstr(buf[i][j] , "INTERSECT") == 0  ){
-                int pain = 1 ; 
-                char *str ; 
+            else if ( strcmp(buf[i][j] , "UNION") == 0 || strcmp(buf[i][j] , "EXCEPT") == 0 || strcmp(buf[i][j] , "INTERSECT") == 0  ){
+                pain = 1 ; 
+                char *str[300] ; 
                 str[0] = buf[i][j] ; 
                 if ( buf[i][j] == NULL ){
                     if (i+1 <= end_row){
@@ -1834,8 +1984,8 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                 else { 
                     j++ ; 
                 }
-                if ( buf[i][j] == "ALL"){
-                str[1] = buf[i][j] ; 
+                if ( strcmp(buf[i][j]  , "ALL") == 0 ){
+                    str[1] = buf[i][j] ; 
                 }
 
                 tree* superior = createNode(str) ; 
@@ -1852,7 +2002,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                     j++ ; 
                 }
 
-             start_of_tree->children[start_of_tree->num++] =  select_query(int row  , int col , int check  , int end_row , int end_col , int pain   ) ; 
+             start_of_tree->children[start_of_tree->num++] =  select_query( row  ,  col ,  check  ,  end_row ,  end_col ,  pain   ) ; 
 
             }
 
@@ -1860,9 +2010,9 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
             else if (compulsion == 1){
                 int start_row = i ; 
                 int start_col = j ; 
-                while ( buf[i][j] != "FROM "){
+                while ( strcmp(buf[i][j]  , "FROM ") == 0 ){
                     if ( buf[i][j] == NULL ){
-                        if (i+1 <= end_row){
+                        if (i+1 <= end_row){s
                             i = i+ 1 ; 
                             j = 0  ; 
                         }
@@ -1892,7 +2042,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
             else if (compulsion == 2){
                 int start_row = i ; 
                 int start_col = j ; 
-                while (buf[i][j] != "UNION" || buf[i][j] != "EXCEPT" || buf[i][j] != "INTERSECT" ||  buf[i][j] != "WHERE" || buf[i][j] != ';'){
+                while (strcmp(buf[i][j]  , "WHERE ") == 0 || strcmp(buf[i][j]  , "UNION") == 0 || strcmp(buf[i][j]  , "EXCEPT") == 0  || strcmp(buf[i][j]  , "INTERSECT") == 0   ||strcmp(buf[i][j]  , ";") == 0  ){
                     if ( buf[i][j] == NULL ){
                         if (i+1 <= end_row){
                             i = i+ 1 ; 
@@ -1903,12 +2053,12 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                         j++ ; 
                     }
                 }
-                if (buf[i][j] != "WHERE" || buf[i][j] != ';') {
+                if (strcmp(buf[i][j]  , "WHERE ") == 0  || strcmp(buf[i][j]  , ";") == 0 ) {
                     if ( j-1 > 0 ){
                         j = j-1 ; 
                     }
                     else {
-                        int temp_row ; 
+                        int temp_row  = 0 ; 
                         int temp_col ; 
                         if ( i- 1 > 0 ){
                         temp_row = i -1 ; 
@@ -1919,7 +2069,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                         }
                         temp_col = 0 ; 
                         int size = 0 ; 
-                        for ( temp_col= 0 ; buf[temp_row][temp_col] != NULL ; i++ ){
+                        for ( temp_col= 0 ; buf[temp_row][temp_col] != NULL ; temp_col++ ){
                         }
                         j = temp_col -1 ; 
                         i = temp_row ; 
@@ -1933,7 +2083,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                     node = node->children[node->num - 1 ] ;  
                     }
                     else { 
-                        start_of_tree->children[start_of_tree->num++] = start_temp ; 
+                        start_of_tree->children[start_of_tree->num++] = comp_2(buf , node , start_row , start_col , i , j , pain )  ; 
                     }
                 }
                 continue ; 
@@ -1946,7 +2096,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
             else if (compulsion == 3){
                 int start_row = i ; 
                 int start_col = j ; 
-                while (buf[i][j] != "UNION" || buf[i][j] != "EXCEPT" || buf[i][j] != "INTERSECT" || buf[i][j] != ';'){
+                while (strcmp(buf[i][j]  , "UNION") == 0 || strcmp(buf[i][j]  , "EXCEPT") == 0  || strcmp(buf[i][j]  , "INTERSECT") == 0   ||strcmp(buf[i][j]  , ";") == 0  ){
                     if ( buf[i][j] == NULL ){
                         if (i+1 <= end_row){
                             i = i+ 1 ; 
@@ -1957,12 +2107,12 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                         j++ ; 
                     }
                 }
-                if (buf[i][j] != ';') {
+                if (strcmp(buf[i][j]  , ";") == 0 ) {
                     if ( j-1 > 0 ){
                         j = j-1 ; 
                     }
                     else {
-                        int temp_row ; 
+                        int temp_row = 0  ; 
                         int temp_col ; 
                         if ( i- 1 > 0 ){
                         temp_row = i -1 ; 
@@ -1973,7 +2123,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                         }
                         temp_col = 0 ; 
                         int size = 0 ; 
-                        for ( temp_col= 0 ; buf[temp_row][temp_col] != NULL ; i++ ){
+                        for ( temp_col= 0 ; buf[temp_row][temp_col] != NULL ; temp_col++ ){
                         }
                         j = temp_col -1 ; 
                         i = temp_row ; 
@@ -1987,7 +2137,7 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
                     node = node->children[node->num - 1 ] ;  
                     }
                     else { 
-                        start_of_tree->children[start_of_tree->num++] = start_temp ; 
+                        start_of_tree->children[start_of_tree->num++] =  comp_3(buf , node , start_row , start_col , i , j , pain  , 0 ) ; 
                     }
                 }
                 continue ; 
@@ -2000,6 +2150,116 @@ tree* select_query(int row  , int col , int check  , int end_row , int end_col ,
     return start_of_tree ; 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
