@@ -114,7 +114,9 @@ see we have the functions very comman the sql like count sum avg and so these ne
  there can be nested queries so we need to manage those so yeah added them loop goes on and we get all of them covered so yeah not much to talk about 
 this one straightforward as that errors were also like normal " and ' these ones and the null werent taken in the account nothing that much of major 
 so yeah 
-
+only one major issue ill tell here was just the see the issue was if the first thing is not the operator with the priority but if the next one is the 
+priority is true rthen it needs to be covered inside the operator so we simply needs to push the thing in the expression if the next thing is the
+ prioirty thing 
 
 
 
@@ -133,3 +135,7 @@ null is a operand here which was getting kicked of so yeah a problem also the is
 specific functions giving us what the amount of operands need to be considered and then one more function which i kinda of didnt condidered here was 
 the nested queries i didnt really thougth it would be used but yeah it was a bit important so i added that as well a smaller bug as well whatever the 
 recursive funcrtion which were called werent check with the null so had to add those functions as well 
+and the biggest issue here which caused a hell lot of headache to me like the insanity of headache was the i was adding the select queries in the 
+expression tree but instead it was needed to be pushed in the stack which kind of cuased a hell lot of trouble to me it also cuased infinite loop 
+as well plus the tree forming was also wrong there plus the last thing of operand needs to made null as like in the stack we only playing with the 
+top variable right so the null is very necessary as rthere are condition regarding it so yeah that was it 
