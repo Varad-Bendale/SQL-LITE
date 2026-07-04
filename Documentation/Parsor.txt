@@ -101,22 +101,22 @@ One of minor mistake which caused me problem was there was this dataint thing th
 
 okay comming on the main parser of the queries the select commands see its quite straight forward okay first matter of action 
 
+we need to make a tree ast for the all the query we write here so that we can work on it so simply we make a tree with the nested trees children 
+and we store all the syntax termms all the words everything in it 
 
 
+okay lets talk about the nested queries as well see there is possiblity that we have query inside the query so we need to catch it up so simply 
+first we need to fetch the end of the row and the end of the column which is whereever the bracket fulfils the criteria till there we add the things
+ and then directly put the nested loop for the select queries 
+now see there aare two things which can happen once the ( comes first the if the next term is select we go for recursion but if its not then its 
+probably a expression or a display of the terms specifically so first we check the priority of the thing if there is presnet its quite clear for 
+the expression but if its not we then look for the next term if its the pirority then also we need to go for the expresison i faced a lot of 
+issues in here simply cause of the the thing was like the first operand was declared as the leaf and then once the priroity gets true the tree 
+was formed with the operand being not present which leads to the not making plus errors as well so yeah it was like a good safe gaurd and if 
+none of it is getting true its just a leaf make it a leaf and then move forward now see here we are in the loop for the strcmp(buf[i][j] , ")") != 0 
+so the continue was not at all needed here ( in cases see there is the while loops which like as soon as it ends we need to put the conntinue else we
+ would lose that word beacuase of the auto increment in the end ) 
 
-okay lets talk about the nested queries as well see there is possiblity that we have query inside the query so we need to catch it up // okay continue 
-fronm here cant write it any more // 
-\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-
-see we have the functions very comman the sql like count sum avg and so these need to properly insterted in the ast so simply created a function made
- the main node of the thing 2 steps ahead cause we need to avoid the braces and rthen we go inside so simply there can be expressions in the thing or
- there can be nested queries so we need to manage those so yeah added them loop goes on and we get all of them covered so yeah not much to talk about 
-this one straightforward as that errors were also like normal " and ' these ones and the null werent taken in the account nothing that much of major 
-so yeah 
-only one major issue ill tell here was just the see the issue was if the first thing is not the operator with the priority but if the next one is the 
-priority is true rthen it needs to be covered inside the operator so we simply needs to push the thing in the expression if the next thing is the
- prioirty thing 
 
 
 
@@ -139,3 +139,61 @@ and the biggest issue here which caused a hell lot of headache to me like the in
 expression tree but instead it was needed to be pushed in the stack which kind of cuased a hell lot of trouble to me it also cuased infinite loop 
 as well plus the tree forming was also wrong there plus the last thing of operand needs to made null as like in the stack we only playing with the 
 top variable right so the null is very necessary as rthere are condition regarding it so yeah that was it 
+it also didnt supported alright the thing here was the it didnt supported function as well had to do that one as well simple logic look out for all 
+braces inside of it initialise at 0 and add a bool tag as well for just checking that atleast one of them is present or not so yeah had to add this 
+one in the expression and then also after the exprerssion function were called outside the while loop of ( cuase it stops when hitted to the ( 
+but when it like in the while loop and then we hit some of the syntax then there was no continue in it as it may go ahead of it so yeah small thing 
+cuases huge huge freaking problem . onto the next one see in the function if we need to call the node which needs to be passed was also a big problem 
+as well which was caused like if the prev_tree where empty then we needed to liek pass a null tree and then make the tree and join it and if the normal
+ cfonditions where there no problem it was the same so yeah 
+
+
+
+
+
+see we have the functions very comman the sql like count sum avg and so these need to properly insterted in the ast so simply created a function made
+ the main node of the thing 2 steps ahead cause we need to avoid the braces and rthen we go inside so simply there can be expressions in the thing or
+ there can be nested queries so we need to manage those so yeah added them loop goes on and we get all of them covered so yeah not much to talk about 
+this one straightforward as that errors were also like normal " and ' these ones and the null werent taken in the account nothing that much of major 
+so yeah 
+only one major issue ill tell here was just the see the issue was if the first thing is not the operator with the priority but if the next one is the 
+priority is true rthen it needs to be covered inside the operator so we simply needs to push the thing in the expression if the next thing is the
+ prioirty thing similar problem was present in here as well for the continue 
+
+
+
+okay onto the case expression tree see we have the case syntax for example case '' when '' then '' else '' so simple thing there can be the expression 
+or the nested query in the gap only thing is following the syntax correctly so see firsrt case is the boss and then all the when and then reports to case 
+but if there is then in the space of the when then it makes a new tree from there and then adds it to the when simple is for that i had to store each of
+ the tree inside a array of trees so then keep the track of all the nodes which pass through the when and else and then as soon as we hit the then then
+ we just make a new node and then pass the temp to it cause already our temp is set to the when when we enter the thing also the nested case is possible 
+so added those things as well 
+about the errors i forgoted to added then and then it was more pain to get it covered again and then it hitted infinite loop as well for not adding the 
+conitnue in the after the then see you can see how naive the problems or bugs are but trust me when the code is so freaking huge it kills entire eyes to
+ patch them up so yeah 
+
+
+
+
+
+
+okay finnally on the comp_1 funtion see it was made for the part where ;- select '' from only this much part can be function can be nested loop inside
+ can be exprssion those stuff where there and stops at from the from was taken care in the main function so not a huge problem about it few of the problem 
+came same i stated it in top majority of them were the same only new one was the * one see if the select * from so if * comes in the thing it instantly
+ crashes as it supposes it as a multiplication * and then starts to look for the operands whereas there are none of them only seelct is there and select 
+is definately not defined so giving up nothing so yeah it was solved an so one of the most classic mistake or rather the testcase which i didnt really
+ took in account was see if we enter the ( thing we need to go till the most endest ) is not achieved i was simply doing it which kind of bad let me 
+explain with a example see ( a * ( b+ c ) * d ) so here by the earlier methos we did covered till where to go but the most purest form of the equation 
+is needed for the expression now you may think that this could have been never happened if we go in the expression and then 
+recursion could have fixed it nope the start and the end are kind of fixed it goes in infinite loop so not relly a good idea for it 
+
+
+as soon as we cross the from we goes to the next part which is from '' where so in between the nested queries can come the join can come normal expression
+ can come so yeah same as the comp_1 i dont wanna convey that much again just the new thing of the join so see let me give you the normal thing see we have
+ multiple varianets of the join and then tthere is the on with the join now those are valid for all of the other but not the cross join so the same procedurue
+ of the comes the normal again but one thing is different here see we have the union thing for this one if the union comes then in the ast these function 
+directly gets attached to the union node else to the normal temp which is going in the thing and then lets move to one of the issue worth telling was the 
+on thing see as i mentioned ealrier the on and the cross join is not really possible so see also the issue is on comes in the prioity which we have in the 
+expression function so i was taking that condition inside the loop of the expression and as the on wqas in the priority it was breaking everything as the 
+operands werent clear either all the logic failed fix was quite simple simply take it out of the loop 1 arrow 2 kills killed entire programe itself haha then 
+there was issue in the increment small one not worth honestly so yeah 
