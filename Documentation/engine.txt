@@ -1,0 +1,47 @@
+finally now the sql tree which we made now its time for the execution okay so see we like have the tree we now need to make the code gen which calls out small small functions which are known as bytecodes 
+
+
+
+-------put this when in the fucntions are made okay __-------------------------
+maybe before jumping to it i thought adding some of research i did so maybe thaught to put it in see like the database file and the normal files like csv files are different ofc they are ( my stupid ass took a hell lot of time to figure this out haha ) and see we have the thing where like to put the cursor somewhere see we dont have the array here so that we can put anywhere we just have the bytes of it so liek each and every word in the string count as a byte so then as per it we like position our cursor there and same as for loop
+
+-------------------------------------------------------------------------------
+
+
+
+
+
+see i am making this thing bottom up method so the very first thing which i did was to ofc go through the sql lite documentation read about the bytecode so see these functions are like 
+function-name  register-1 register-2 register-3 register-4  
+first 3 are integers but the register 4 is kept like for a backup suppose some string appear or some null occur then it needs to be taken care of 
+
+then we have the registers see its like a playground all the operations occur here all the data is stored here think like everything which needs to be occuring happens here 
+it have like length for the blob ( url for the images ) or string 
+and space for the integers / float / strings 
+and type for it what is the type of data in the thing 
+
+so the thing is each and every of these pointers are used differently every single time so yeah had to document it 
+
+begin_op = nothing meaningful 
+
+goto_op = (p2 = which step ) go to any step there in the code or the list 
+
+halt = stop or return nothing useful 
+
+integer_op / real_op = (p1 = which number , p2 = where to add  ) integer or the float 
+
+blob_op = ( p2 = where to add && p4 = the url && p1 = lenght )  the url for images or some random ass strings 
+
+string_op = ( p2 = where to add && p4 = the string && p1 = lenght )  the strings 
+
+
+copy_op  = ( p2 = where to copy && p1 = what to copy ) copy the whole register and then put 
+
+move_op = ( p2  = where to move && p1  = what to move and delete ) the p2 copies the address of the p1's register and then p1 free itself 
+
+add_op/subs_op/divide_op/mul_op = ( p1 = first operand  && p2 = second operand && p3 where to add the result of these ) so here if one of them is like integer and one as a float then we convert the integer to the float and then do the operation which is there to and out result type is the same way as well 
+
+
+gt/eq/lt/ge/le = ( p1 = right side candidate && p2 = if condition correct where to go && p3 = left side candidate && p4 = for getting the type of equations for the string operations for example binary , nocase etc etc ) yeah the same case here as well if integer and float we convert the integer to float and then compute whatever there is to 
+
+
