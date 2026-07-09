@@ -917,7 +917,17 @@ void bytcode(byte *byt){
                 byt->btr[op->p1].mode  = cursor_write ; 
                 end = false ; 
             
+            case close_cursor_op : 
+                if (byt->btr[op->p1] ==  NULL){
+                    free(byt->btr[op->p1]) ; 
+                    byt->btr[op->p1] =  NULL
+                }
             
+            case next_cursor : 
+                if (byt->btr[op->p1].end != false ){
+                    
+                }
+
 
             
                 
