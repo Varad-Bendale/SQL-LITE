@@ -24,7 +24,8 @@
 #define MAX 1024 
 #define quit 1
 int highlight = 0 ; 
-#include<strings.h>
+
+define PAGE_SIZE 4096
 enum { 
     int_num = 1 , 
     blob_num , 
@@ -43,10 +44,22 @@ enum {
      add_op , 
      subs_op , 
      mul_op , 
-     divide_op
+     divide_op , 
+     eq_op , 
+     ne_op , 
+     gt_op
+     lt_op , 
+     le_op , 
+     ge_op , 
+     cursor_read , 
+     cursor_write  , 
+     open_write_op , 
+     open_read_op
 }
 
-
+typedef struct Pager{
+    FILE *file ; 
+}
 
 typedef struct type{
     int operand ; 
@@ -68,13 +81,69 @@ typedef struct reg{
     }val ; 
 }
 
+typedef struct path_entry{
+    uint32_t page_num     ; 
+    uint16_t  cell_index     ; 
+}
+
+
+typedef struct btree{
+    table * Table ; 
+    uint32_t start_root_num ; 
+    uint32_t page_num ; 
+    uint32_t row_num ; 
+    bool start ; 
+    bool end ; 
+    int total ; 
+    int mode ; 
+    int depth ; 
+    path_entry stack[300] ; 
+}
 
 typedef struct byte{
     type prog[300] ; 
     int prog_count ; 
     int ins_count ; 
     reg regis[300] ; 
+    btree btr[300] ; 
+    table *db ; 
+    Pager *pager ; 
 }
+
+typedef struct page_header{
+    uint8_t page_type ; 
+    uint16_t free_space ; 
+    uint16_t num_cells  ; 
+}__attribute__((packed)) 
+
+
+
+
+void *pager_get_page(Pager *pager, uint32_t page_num) {
+    void *buf = malloc(PAGE_SIZE);
+    fseek(pager->file, page_num * PAGE_SIZE, SEEK_SET);
+    fread(buf, 1, PAGE_SIZE, pager->file);
+    return buf;
+}
+
+void* get_child_key(Pager * pager ,uint32_t page_num , uint16_t cell_index ){
+    uint8_t *raw = pager_get_page(pager , page_num ) ; 
+    uint16_t *cell_offset = sizeof(page_header) + ( cell_index * CELL_SIZE ) ; 
+    void *addr  ; 
+    memcpy(addr ,raw + cell_offset , sizeof(uint32_t) ) ; 
+    return addr ; 
+}
+
+
+
+uint32_t get_child_pointer(Pager * pager ,uint32_t page_num , uint16_t cell_index ){
+    uint8_t *raw = pager_get_page(pager , page_num ) ; 
+    uint16_t *cell_offset = sizeof(page_header) + ( cell_index * CELL_SIZE ) ; 
+    uint32_t *addr  ; 
+    memcpy(addr ,raw + cell_offset , sizeof(uint32_t) ) ; 
+    return addr ; 
+}
+
 
 
 typedef struct row_input{ 
@@ -7172,19 +7241,181 @@ void bytcode(byte *byt){
                 }
             
             case next_cursor : 
-                if (byt->btr[op->p1].end != false ){
-                    
+                 path_entry * ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                page_header *hdr = pager_get_page(byt->pager , ptr->page_num ) ; 
+                 if (byt->btr[op->p1].end == true ){
+                    break ; 
+                 }
+                if (ptr->cell_index + 1 < hdr->num_cells ){
+                    byt->btr[op->p1].row_num++ ; 
+                    byt->btr[op->p1].page_num = ptr->page_num ; 
+                    ptr->cell_index++ ; 
+                    break ; 
                 }
+                int kept = 0 ; 
+                byt->btr[op->p1].depth = byt->btr[op->p1].depth - 1  ; 
+                while ( byt->btr[op->p1].depth > 0 ){
+                    ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                    hdr = pager_get_page(byt->pager , ptr->cell_index) ; 
+                    if (ptr->cell_index + 1 < hdr->num_cells ){
+                            ptr->cell_index++ ; 
+                            uint32_t children = get_child_pointer(byt->pager , ptr->page_num ,ptr->cell_index ) ; 
+                            page_header chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                while ( chdr->page_type != LEAF ){
+                                    byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , 0 } ; 
+                                    children = get_child_pointer(byt->pager , ptr->page_num  ,0 )  ; 
+                                    chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                }
+                            byt->btr[op->p1].stack[byt->btr[op->p1].depth++]  = (path_entry){children , 0 } ; 
+                            byt->btr[op->p1].page_num = children ; 
+                            byt->btr[op->p1].row_num++ ;  
+                            kept = 1 ; 
+                            break ; 
+                    }
+                    byt->btr[op->p1].depth-- ; 
+                }
+                if (kept == 1 ){
+                    break ; 
+                }
+                byt->btr[op->p1].end  = true ; 
+                break ; 
 
+
+
+            case prev_cursor : 
+                 path_entry * ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                page_header *hdr = pager_get_page(byt->pager , ptr->page_num ) ; 
+                if (byt->btr[op->p1].start == true ){
+                    break ; 
+                 }
+                if (ptr->cell_index > 0 ){
+                    byt->btr[op->p1].row_num-- ; 
+                    byt->btr[op->p1].page_num = ptr->page_num ; 
+                    ptr->cell_index-- ; 
+                    break ; 
+                }                  
+                int kept = 0 ; 
+                byt->btr[op->p1].depth = byt->btr[op->p1].depth - 1  ; 
+                while (byt->btr[op->p1].depth  > 0 ){
+                    hdr = pager_get_page(byt->pager , byt->btr[op->p1].page_num) ; 
+                    ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                    if (ptr->cell_index > 0 ){
+                        ptr->cell_index-- ; 
+                        uint32_t children = get_child_pointer(byt->pager , ptr->page_num ,ptr->cell_index ) ; 
+                        page_header *chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                            while ( chdr->page_type != LEAF ){  
+                                byt->btr[op->p1].stack[byt->btr[op->p1].depth++]  = (path_entry){children ,chdr->num_cells - 1 } ; 
+                                children = get_child_pointer(byt->pager , children  ,chdr->num_cells - 1 )  ; 
+                                chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                            }
+                            byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , chdr->num_cells - 1   } ; 
+                            byt->btr[op->p1].page_num = children ; 
+                            byt->btr[op->p1].row_num-- ;  
+                            kept = 1 ; 
+                            break ; 
+                    }
+                    byt->btr[op->p1].depth-- ; 
+                }
+                if (kept == 1 ){
+                    break ; 
+                }
+                byt->btr[op->p1].start = true 
+                
+                break ; 
+
+
+            case rewind_cursor : 
+                byt->btr[op->p1].depth = 0 ; 
+                uint32_t children = byt->btr[op->p1].start_root_num   ; 
+                page_header *hdr = pager_get_page(byt->pager , children) ; 
+                byt->btr[op->p1].stack[byt->btr[op->p1].depth] = (path_entry){children  , 0 } ; 
+                while ( hdr->page_type != LEAF ){
+                     children = get_child_pointer(byt->pager , children  ,0 )  ; 
+                    hdr = (page_header*)pager_get_page(byte->pager,children  ) ; 
+                    byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , 0 } ; 
+                }
+                byt->btr[op->p1].page_num = children ; 
+                byt->btr[op->p1].row_num = 0 ; 
+                break ; 
 
             
+            case cursor_end : 
+                byt->btr[op->p1].depth = 0 ; 
+                uint32_t children = byt->btr[op->p1].start_root_num   ; 
+                page_header *hdr = pager_get_page(byt->pager , children) ; 
+                byt->btr[op->p1].stack[byt->btr[op->p1].depth] = (path_entry){children  , hdr->num_cells-1 } ; 
+                while ( hdr->page_type != LEAF ){
+                     children = get_child_pointer(byt->pager , children  ,hdr->num_cells-1  )  ; 
+                    hdr = (page_header*)pager_get_page(byte->pager,children  ) ; 
+                    byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , hdr->num_cells-1  } ; 
+                }
+                byt->btr[op->p1].page_num = children ; 
+                byt->btr[op->p1].row_num = byt->btr[op->p1].total - 1   ; 
+                break ; 
+
+            case seek_ge : 
                 
 
 
+            case if_op : 
+              reg * temp = &byt->regis[op->p1];
+              int check = 0 ; 
+                if (temp->type == integer_num ){
+                    if (temp.val.i != 0 ){
+                        check = 1 ; 
+                    } 
+                }
+                else if (temp->type == real_num){
+                    if (temp.val.r != 0.0 ){
+                        check = 1 ; 
+                    } 
+                }
+                else if(temp->type == string_num) {
+                    if (temp->lenght > 0 ){
+                        check = 1 ; 
+                    }
+                }
+                if ( check == 1 ){
+                    byt->pc = op->p2;
+                }
+                break ; 
 
+
+            case if_not_op : 
+              reg * temp = &byt->regis[op->p1];
+              int check = 0 ; 
+                if (temp->type == integer_num ){
+                    if (temp.val.i == 0 ){
+                        check = 1 ; 
+                    } 
+                }
+                else if (temp->type == real_num){
+                    if (temp.val.r == 0.0 ){
+                        check = 1 ; 
+                    } 
+                }
+                else if(temp->type == string_num) {
+                    if (temp->lenght == 0 ){
+                        check = 1 ; 
+                    }
+                }
+                if ( check == 1 ){
+                    byt->pc = op->p2;
+                }
+                break ; 
+
+            
+
+
+
+                    }
+                }
+                
         }
-    }
-}
+
+
+
+
 
 
 
