@@ -55,6 +55,11 @@ typedef struct reg{
     }val ; 
 }
 
+typedef struct sorter{
+    reg regis[300] ; 
+    int num ; 
+}
+
 typedef struct path_entry{
     uint32_t page_num     ; 
     uint16_t  cell_index     ; 
@@ -427,14 +432,16 @@ int bs( void * node , reg target  , int data_type  , int *index  , int (*functio
 
 
 
-aggregate agg_operation( reg num ,  char *  operation ){
-    aggregate ans ; 
+void agg_operation( aggregate *ans  , reg *num ,  char *  operation ){
     if (strcmp(operation , "SUM") == 0 ){
         if (num->type == integer_num ) {
         ans->total =  ans->total + num->val.i ; 
         }
         else if (num->type == real_num  ){
         ans->total =  ans->total + num->val.r ;    
+        }
+        else {
+            return  ; 
         }
     }
     else if (strcmp(operation , "AVG") == 0){
@@ -444,19 +451,126 @@ aggregate agg_operation( reg num ,  char *  operation ){
         else if (num->type == real_num  ){
         ans->total =  ans->total + num->val.r ;    
         } 
+        else {
+            return  ; 
+        }
         ans->count = ans->count + 1 ; 
-        ans->total = ans->total / ans->count ;   
     }
     else if (strcmp(operation , "COUNT") == 0 ){
         ans->count = ans->count + 1 ; 
     }
     else if (strcmp(operation , "MIN") == 0  ){
        if (ans->have_value == false ){
-            ans->min.va
+            if (num->type == integer_num){
+                ans->min.val.i = num->val.i ; 
+                ans->have_value = true ; 
+            }
+             else if (num->type == real_num){
+                ans->min.val.r = num->val.r ; 
+                ans->have_value = true ; 
+            }
+            else {
+                return  ; 
+            }
        } 
+       else {
+            if (num->type == integer_num){
+                if (num->val.i < ans->min.val.i ){
+                    ans->min.val.i = num->val.i ; 
+                  }
+            }
+             else if (num->type == real_num){
+                if (num->val.r < ans->min.val.r ){
+                    ans->min.val.r = num->val.r ; 
+                }
+            }
+            else {
+                return  ; 
+            }
+       }
+    }
+
+    else if (strcmp(operation , "MAX") == 0  ){
+       if (ans->have_value == false ){
+            if (num->type == integer_num){
+                ans->max.val.i = num->val.i ; 
+                ans->have_value = true ; 
+            }
+             else if (num->type == real_num){
+                ans->max.val.r = num->val.r ; 
+                ans->have_value = true ; 
+            }
+            else {
+                return  ; 
+            }
+       } 
+       else {
+            if (num->type == integer_num){
+                if (num->val.i > ans->max.val.i ){
+                    ans->max.val.i = num->val.i ; 
+                  }
+            }
+             else if (num->type == real_num){
+                if (num->val.r > ans->max.val.r ){
+                    ans->max.val.r = num->val.r ; 
+                }
+            }
+            else {
+                return  ; 
+            }
+       }
+    }
+
+    else if (strcmp(operation , "GROUP_CONCAT") == 0 ){
+        if (num->type  != string_num ){
+            return  ; 
+        }
+        ans->concat_string = realloc(ans->concat_string  , ans->string_len + num->lenght ) ; 
+        strcat(ans->concat_string , num->val.s ) ; 
     }
 }
 
+void agg_final(aggregate *ans  , reg *num ,  char *  operation ){
+        if (strcmp(operation , "SUM") == 0 ){
+            if (ans->type == integer_num ) {
+                num->type = integer_num ; 
+                num->val.i = ans->total ; 
+            }
+            else if (ans->type == real_num  ){
+                num->type = real_num ; 
+                num->val.r = ans->total ;  
+            }
+            }
+
+        else if (strcmp(operation , "AVG") == 0 ){
+            num->type = real_num ; 
+            num->val.r = ans->total/ans->count ; 
+        }
+        
+        else if (strcmp(operation , "COUNT") == 0 ){
+            num->val.i = ans->count ; 
+        }
+        else if (strcmp(operation , "MIN") == 0 ){
+            if (ans->min.type == integer_num){
+                num->val.i = ans->min.val.i ; 
+            }
+            else if (ans->min.type == real_num){
+                num->val.r = ans->min.val.r ; 
+            }
+        }
+        else if (strcmp(operation , "MAX") == 0 ){
+            if (ans->max.type == integer_num){
+                num->val.i = ans->max.val.i ; 
+            }
+            else if (ans->max.type == real_num){
+                num->val.r = ans->max.val.r ; 
+            }
+        }
+        else if (strcmp(operation , "GROUP_CONCAT") == 0 ){
+            num->lenght = ans->string_len ; 
+            num->val.s = ans->concat_string  ;    
+        }
+}
 
 void bytcode(byte *byt){
     byt->prog_count = 0;
@@ -1755,16 +1869,18 @@ void bytcode(byte *byt){
             
             case aggregate_step : 
                 char *  operation = *(char*)op->p4 ; 
-                byt->agg[op->p1] = agg_operation(byt->regis[op->p2] , operation )  ; 
+                 agg_operation(byt->agg[op->p1] , byt->regis[op->p2] , operation )  ; 
+                break ; 
+            
+            case aggregate_final : 
+                char * operation = *(char*)op->p4  ; 
+                agg_final(byt->agg[op->p1] , byt->regis[op->p3] , operation) ; 
+                break ; 
 
-
+            case sorter_init : 
 
                     }
                 }
                 
         }
 
-
-
-
-..
