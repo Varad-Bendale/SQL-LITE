@@ -23,126 +23,9 @@
 #define nope -1.0f
 #define MAX 1024 
 #define quit 1
+#define PAGE_SIZE 4096
 int highlight = 0 ; 
 
-define PAGE_SIZE 4096
-enum { 
-    int_num = 1 , 
-    blob_num , 
-    string_num , 
-    null , 
-    integer_op   , 
-    begin_op , 
-    next_op , 
-    print_op , 
-    halt  , 
-    blob_op , 
-    string_op , 
-    null_op , 
-    real_op ,
-     real_num , 
-     add_op , 
-     subs_op , 
-     mul_op , 
-     divide_op , 
-     eq_op , 
-     ne_op , 
-     gt_op
-     lt_op , 
-     le_op , 
-     ge_op , 
-     cursor_read , 
-     cursor_write  , 
-     open_write_op , 
-     open_read_op
-}
-
-typedef struct Pager{
-    FILE *file ; 
-}
-
-typedef struct type{
-    int operand ; 
-    int p1 ; 
-    int p2 ; 
-    int p3 
-    void * p4 ; 
-    int p4_type ; 
-} ; 
-
-
-typedef struct reg{
-    int type ; 
-    int lenght ; 
-    union{
-        long i ; 
-        char *s ; 
-        float r ; 
-    }val ; 
-}
-
-typedef struct path_entry{
-    uint32_t page_num     ; 
-    uint16_t  cell_index     ; 
-}
-
-
-typedef struct btree{
-    table * Table ; 
-    uint32_t start_root_num ; 
-    uint32_t page_num ; 
-    uint32_t row_num ; 
-    bool start ; 
-    bool end ; 
-    int total ; 
-    int mode ; 
-    int depth ; 
-    path_entry stack[300] ; 
-}
-
-typedef struct byte{
-    type prog[300] ; 
-    int prog_count ; 
-    int ins_count ; 
-    reg regis[300] ; 
-    btree btr[300] ; 
-    table *db ; 
-    Pager *pager ; 
-}
-
-typedef struct page_header{
-    uint8_t page_type ; 
-    uint16_t free_space ; 
-    uint16_t num_cells  ; 
-}__attribute__((packed)) 
-
-
-
-
-void *pager_get_page(Pager *pager, uint32_t page_num) {
-    void *buf = malloc(PAGE_SIZE);
-    fseek(pager->file, page_num * PAGE_SIZE, SEEK_SET);
-    fread(buf, 1, PAGE_SIZE, pager->file);
-    return buf;
-}
-
-void* get_child_key(Pager * pager ,uint32_t page_num , uint16_t cell_index ){
-    uint8_t *raw = pager_get_page(pager , page_num ) ; 
-    uint16_t *cell_offset = sizeof(page_header) + ( cell_index * CELL_SIZE ) ; 
-    void *addr  ; 
-    memcpy(addr ,raw + cell_offset , sizeof(uint32_t) ) ; 
-    return addr ; 
-}
-
-
-
-uint32_t get_child_pointer(Pager * pager ,uint32_t page_num , uint16_t cell_index ){
-    uint8_t *raw = pager_get_page(pager , page_num ) ; 
-    uint16_t *cell_offset = sizeof(page_header) + ( cell_index * CELL_SIZE ) ; 
-    uint32_t *addr  ; 
-    memcpy(addr ,raw + cell_offset , sizeof(uint32_t) ) ; 
-    return addr ; 
-}
 
 
 
@@ -6390,6 +6273,532 @@ tree * select_query( int row , int col , int check , int end_row , int end_col ,
 
 
 
+enum { 
+    int_num = 1 , 
+    blob_num , 
+    string_num , 
+    null , 
+    integer_op   , 
+    begin_op , 
+    next_op , 
+    print_op , 
+    halt  , 
+    blob_op , 
+    string_op , 
+    null_op , 
+    real_op ,
+     real_num , 
+     add_op , 
+     subs_op , 
+     mul_op , 
+     divide_op , 
+     eq_op , 
+     ne_op , 
+     gt_op
+     lt_op , 
+     le_op , 
+     ge_op , 
+     cursor_read , 
+     cursor_write  , 
+     open_write_op , 
+     open_read_op
+}
+
+typedef struct Pager{
+    FILE *file ; 
+}
+
+typedef struct type{
+    int operand ; 
+    int p1 ; 
+    int p2 ; 
+    int p3 
+    void * p4 ; 
+    int p4_type ; 
+} ; 
+
+
+typedef struct reg{
+    int type ; 
+    int lenght ; 
+    union{
+        long i ; 
+        char *s ; 
+        float r ; 
+    }val ; 
+}
+
+typedef struct path_entry{
+    uint32_t page_num     ; 
+    uint16_t  cell_index     ; 
+}
+
+
+typedef struct btree{
+    table * Table ; 
+    uint32_t start_root_num ; 
+    uint32_t page_num ; 
+    uint32_t row_num ; 
+    bool start ; 
+    int data_type ; 
+    bool end ; 
+    int total ; 
+    int mode ; 
+    int depth ; 
+    path_entry stack[300] ; 
+}
+
+typedef struct aggregate{
+    reg min ; 
+    reg max ; 
+    double total ; 
+    int type ; 
+    char *concat_string ; 
+    int * string_len ; 
+    bool have_value ; 
+    int count ; 
+}
+
+
+typedef struct byte{
+    type prog[300] ; 
+    int prog_count ; 
+    int ins_count ; 
+    reg regis[300] ; 
+    aggregate agg[300] ; 
+    btree btr[300] ; 
+    table *db ; 
+    Pager *pager ; 
+}
+
+typedef struct page_header{
+    uint8_t page_type ; 
+    uint16_t free_space ; 
+    uint16_t num_cells  ; 
+}__attribute__((packed)) 
+
+
+
+
+void *pager_get_page(Pager *pager, uint32_t page_num) {
+    void *buf = malloc(PAGE_SIZE);
+    fseek(pager->file, page_num * PAGE_SIZE, SEEK_SET);
+    fread(buf, 1, PAGE_SIZE, pager->file);
+    return buf;
+}
+
+
+
+
+uint32_t get_child_pointer(Pager * pager ,uint32_t page_num , uint16_t cell_index ){
+    uint8_t *raw = pager_get_page(pager , page_num ) ; 
+    uint16_t *cell_offset = sizeof(page_header) + ( cell_index * CELL_SIZE ) ; 
+    uint32_t *addr  ; 
+    memcpy(addr ,raw + cell_offset , sizeof(uint32_t) ) ; 
+    return addr ; 
+}
+
+void *get_cell(void *node, uint32_t cell_num) {
+    char *base = (char*)node;              
+    return base + sizeof(page_header) + (cell_num * CELL_SIZE);
+}
+
+
+
+int campare_ge(reg target , void * cell_key , int  data_type ){
+   if (target->type == integer_num){
+        if (data_type == 1 ){
+            uint32_t num = *(uint32_t*)cell_key ; 
+            if (num >= target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            int num_temp = int(num) ; 
+            if (num_temp >= target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else {
+            return -1 ; 
+        }
+    }
+    else if ( target->type == real_num ){
+        if (data_type == 1 ){
+            uint32_t num_temp = *(uint32_t*)cell_key ; 
+            float num = (float)num_temp ; 
+            if (num >= target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            if (num >= target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+    else { 
+        if (data_type == 3 ){
+            char *str_temp = (char *)cell_key; 
+             int len = strlen(str_temp) ; 
+                 if (strlen(target->val.s) >= (size_t)len ? strncmp(target->val.s, str_temp, len) >= 0 : strncmp(target->val.s, str_temp, strlen(target->val.s)) > 0){
+                    return 0 ; 
+                }
+                else { 
+                    return -1 
+                } 
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+}
+
+int campare_gt(reg target , void * cell_key , int  data_type ){
+   if (target->type == integer_num){
+        if (data_type == 1 ){
+            uint32_t num = *(uint32_t*)cell_key ; 
+            if (num > target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            int num_temp = int(num) ; 
+            if (num_temp > target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else {
+            return -1 ; 
+        }
+    }
+    else if ( target->type == real_num ){
+        if (data_type == 1 ){
+            uint32_t num_temp = *(uint32_t*)cell_key ; 
+            float num = (float)num_temp ; 
+            if (num > target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            if (num > target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+    else { 
+        if (data_type == 3 ){
+            char *str_temp = (char *)cell_key; 
+             int len = strlen(str_temp) ; 
+                 if (strlen(target->val.s) > (size_t)len ? strncmp(target->val.s, str_temp, len) >= 0 : strncmp(target->val.s, str_temp, strlen(target->val.s)) > 0){
+                    return 0 ; 
+                }
+                else { 
+                    return -1 
+                } 
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+}
+
+int campare_lt(reg target , void * cell_key , int  data_type ){
+   if (target->type == integer_num){
+        if (data_type == 1 ){
+            uint32_t num = *(uint32_t*)cell_key ; 
+            if (num < target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            int num_temp = int(num) ; 
+            if (num_temp < target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else {
+            return -1 ; 
+        }
+    }
+    else if ( target->type == real_num ){
+        if (data_type == 1 ){
+            uint32_t num_temp = *(uint32_t*)cell_key ; 
+            float num = (float)num_temp ; 
+            if (num < target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            if (num < target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+    else { 
+        if (data_type == 3 ){
+            char *str_temp = (char *)cell_key; 
+             int len = strlen(str_temp) ; 
+                 if (strlen(target->val.s) < (size_t)len ? strncmp(target->val.s, str_temp, len) >= 0 : strncmp(target->val.s, str_temp, strlen(target->val.s)) > 0){
+                    return 0 ; 
+                }
+                else { 
+                    return -1 
+                } 
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+}
+
+int campare_le(reg target , void * cell_key , int  data_type ){
+   if (target->type == integer_num){
+        if (data_type == 1 ){
+            uint32_t num = *(uint32_t*)cell_key ; 
+            if (num <= target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            int num_temp = int(num) ; 
+            if (num_temp <= target->val.i){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else {
+            return -1 ; 
+        }
+    }
+    else if ( target->type == real_num ){
+        if (data_type == 1 ){
+            uint32_t num_temp = *(uint32_t*)cell_key ; 
+            float num = (float)num_temp ; 
+            if (num <= target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        if (data_type == 2 ){
+            float num = *(float*)cell_key ; 
+            if (num <= target->val.r){
+                return 0 ; 
+            }
+            else {
+                return -1 ; 
+            }
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+    else { 
+        if (data_type == 3 ){
+            char *str_temp = (char *)cell_key; 
+             int len = strlen(str_temp) ; 
+                 if (strlen(target->val.s) <= (size_t)len ? strncmp(target->val.s, str_temp, len) >= 0 : strncmp(target->val.s, str_temp, strlen(target->val.s)) > 0){
+                    return 0 ; 
+                }
+                else { 
+                    return -1 
+                } 
+        }
+        else { 
+            return -1 ; 
+        }
+    }
+}
+
+
+int bs( void * node , reg target  , int data_type  , int *index  , int (*function_name)(reg, void*, int)){
+    int low = 0 ; 
+    int high = node->num_cells - 1 ; 
+    int cmp = -1  ;
+    bool found = false;  
+    while ( low <= high ){
+        int mid = ( low + high )/ 2 ; 
+        void * cell = get_cell(node , mid ) ; 
+        reg cell_key = get_key_from_cell(cell);
+        cmp = function_name(target , cell_key  , data_type  ) ; 
+         if (cmp == 0 ){
+            found = true ; 
+            if (index != NULL){
+                *index = mid ; 
+            }
+            high = mid -1 ; 
+        }
+        else { 
+            low = mid + 1 ; 
+        }
+    }
+    if ( found == true ){
+        return 1 ; 
+    }
+    return 0 ; 
+
+}
+
+
+
+void agg_operation( aggregate *ans  , reg *num ,  char *  operation ){
+    if (strcmp(operation , "SUM") == 0 ){
+        if (num->type == integer_num ) {
+        ans->total =  ans->total + num->val.i ; 
+        }
+        else if (num->type == real_num  ){
+        ans->total =  ans->total + num->val.r ;    
+        }
+        else {
+            return  ; 
+        }
+    }
+    else if (strcmp(operation , "AVG") == 0){
+        if (num->type == integer_num ) {
+        ans->total =  ans->total + num->val.i ; 
+        }
+        else if (num->type == real_num  ){
+        ans->total =  ans->total + num->val.r ;    
+        } 
+        else {
+            return  ; 
+        }
+        ans->count = ans->count + 1 ; 
+    }
+    else if (strcmp(operation , "COUNT") == 0 ){
+        ans->count = ans->count + 1 ; 
+    }
+    else if (strcmp(operation , "MIN") == 0  ){
+       if (ans->have_value == false ){
+            if (num->type == integer_num){
+                ans->min.val.i = num->val.i ; 
+                ans->have_value = true ; 
+            }
+             else if (num->type == real_num){
+                ans->min.val.r = num->val.r ; 
+                ans->have_value = true ; 
+            }
+            else {
+                return  ; 
+            }
+       } 
+       else {
+            if (num->type == integer_num){
+                if (num->val.i < ans->min.val.i ){
+                    ans->min.val.i = num->val.i ; 
+                  }
+            }
+             else if (num->type == real_num){
+                if (num->val.r < ans->min.val.r ){
+                    ans->min.val.r = num->val.r ; 
+                }
+            }
+            else {
+                return  ; 
+            }
+       }
+    }
+
+    else if (strcmp(operation , "MAX") == 0  ){
+       if (ans->have_value == false ){
+            if (num->type == integer_num){
+                ans->max.val.i = num->val.i ; 
+                ans->have_value = true ; 
+            }
+             else if (num->type == real_num){
+                ans->max.val.r = num->val.r ; 
+                ans->have_value = true ; 
+            }
+            else {
+                return  ; 
+            }
+       } 
+       else {
+            if (num->type == integer_num){
+                if (num->val.i > ans->max.val.i ){
+                    ans->max.val.i = num->val.i ; 
+                  }
+            }
+             else if (num->type == real_num){
+                if (num->val.r > ans->max.val.r ){
+                    ans->max.val.r = num->val.r ; 
+                }
+            }
+            else {
+                return  ; 
+            }
+       }
+    }
+
+    else if (strcmp(operation , "GROUP_CONCAT") == 0 ){
+        if (num->type  != string_num ){
+            return  ; 
+        }
+        ans->concat_string = realloc(ans->concat_string  , ans->string_len + num->lenght ) ; 
+        strcat(ans->concat_string , num->val.s ) ; 
+    }
+}
+
+
 void bytcode(byte *byt){
     byt->prog_count = 0;
     while(1){
@@ -7354,6 +7763,286 @@ void bytcode(byte *byt){
                 break ; 
 
             case seek_ge : 
+                int size = 0 ; 
+                byt->btr[op->p1].depth = 0 ; 
+                uint32_t children = byt->btr[op->p1].start_root_num   ; 
+                page_header *hdr = pager_get_page(byt->pager , children) ; 
+                byt->btr[op->p1].stack[byt->btr[op->p1].depth] = (path_entry){children  , 0 } ; 
+                while ( hdr->page_type != LEAF ){
+                    int id = hdr->num_cells ; 
+                    for ( int i = 0 ; i < hdr->num_cells ; i++  ){
+                        void *cell = get_cell(hdr, i);
+                        reg cell_key = get_key_from_cell(cell);
+                        if (campare(byt->regis[op->p3], cell_key, cur->data_type) == 0) {
+                            id = i;
+                            break;
+                        }
+                    }
+                    children = get_child_pointer(byt->pager , children  ,id )  ; 
+                    hdr = (page_header*)pager_get_page(byte->pager,children  ) ; 
+                    size = size + hdr->num_cells ; 
+                    byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , id } ; 
+                }
+
+                int tot = byt->btr[op->p1].total - 1  ; 
+                int ans_id = -1 ; 
+                int found = 0 ; 
+                while ( size < tot  ){
+                    if(bs(hdr ,byt->regis[op->p3]  , byt->btr[op->p1].data_type ,&ans_id ,  campare_ge ) == 1 ){
+                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , ans_id } ; 
+                        byt->btr[op->p1].page_num = children ; 
+                        byt->btr[op->p1].row_num = ans_id ; 
+                        found = 1 ; 
+                        break ; 
+                    }
+
+                    int kept = 0 ; 
+                    while ( byt->btr[op->p1].depth > 0 ){
+                        path_entry * ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                        page_header * hdr = pager_get_page(byt->pager , ptr->page_num) ; 
+                        if (ptr->cell_index + 1 < hdr->num_cells ){
+                                ptr->cell_index++ ; 
+                                 children = get_child_pointer(byt->pager , ptr->page_num ,ptr->cell_index ) ; 
+                                page_header *chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    while ( chdr->page_type != LEAF ){
+                                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , 0 } ; 
+                                        children = get_child_pointer(byt->pager , ptr->page_num  ,0 )  ; 
+                                        chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    }
+                                byt->btr[op->p1].stack[byt->btr[op->p1].depth++]  = (path_entry){children , 0 } ; 
+                                byt->btr[op->p1].page_num = children ; 
+                                byt->btr[op->p1].row_num++ ;  
+                                kept = 1 ; 
+                                size = size + chdr->num_cells ; 
+                                hdr = chdr ; 
+                                break ; 
+                        }
+                        byt->btr[op->p1].depth-- ; 
+                    }
+                    if (kept == 0 ){
+                        byt->pc = op->p2;
+                        break ; 
+                    }
+                }
+
+                if (!found && size >= tot) {
+                    byt->pc = op->p2;
+                }
+
+                break;
+        
+
+
+            case seek_le : 
+                int size = 0 ; 
+                byt->btr[op->p1].depth = 0 ; 
+                uint32_t children = byt->btr[op->p1].start_root_num   ; 
+                page_header *hdr = pager_get_page(byt->pager , children) ; 
+                byt->btr[op->p1].stack[byt->btr[op->p1].depth] = (path_entry){children  , 0 } ; 
+                while ( hdr->page_type != LEAF ){
+                    int id = hdr->num_cells ; 
+                    for ( int i = 0 ; i < hdr->num_cells ; i++  ){
+                        void *cell = get_cell(hdr, i);
+                        reg cell_key = get_key_from_cell(cell);
+                        if (campare(byt->regis[op->p3], cell_key, cur->data_type) == 0) {
+                            id = i;
+                            break;
+                        }
+                    }
+                    children = get_child_pointer(byt->pager , children  ,id )  ; 
+                    hdr = (page_header*)pager_get_page(byte->pager,children  ) ; 
+                    size = size + hdr->num_cells ; 
+                    byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , id } ; 
+                }
+
+                int tot = byt->btr[op->p1].total - 1  ; 
+                int ans_id = -1 ; 
+                int found = 0 ; 
+                while ( size < tot  ){
+                    if(bs(hdr ,byt->regis[op->p3]  , byt->btr[op->p1].data_type ,&ans_id ,  campare_le   ) == 1 ){
+                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , ans_id } ; 
+                        byt->btr[op->p1].page_num = children ; 
+                        byt->btr[op->p1].row_num = ans_id ; 
+                        found = 1 ; 
+                        break ; 
+                    }
+
+                    int kept = 0 ; 
+                    while ( byt->btr[op->p1].depth > 0 ){
+                        path_entry * ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                        page_header * hdr = pager_get_page(byt->pager , ptr->page_num) ; 
+                        if (ptr->cell_index + 1 < hdr->num_cells ){
+                                ptr->cell_index++ ; 
+                                 children = get_child_pointer(byt->pager , ptr->page_num ,ptr->cell_index ) ; 
+                                page_header *chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    while ( chdr->page_type != LEAF ){
+                                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , 0 } ; 
+                                        children = get_child_pointer(byt->pager , ptr->page_num  ,0 )  ; 
+                                        chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    }
+                                byt->btr[op->p1].stack[byt->btr[op->p1].depth++]  = (path_entry){children , 0 } ; 
+                                byt->btr[op->p1].page_num = children ; 
+                                byt->btr[op->p1].row_num++ ;  
+                                kept = 1 ; 
+                                size = size + chdr->num_cells ; 
+                                hdr = chdr ; 
+                                break ; 
+                        }
+                        byt->btr[op->p1].depth-- ; 
+                    }
+                    if (kept == 0 ){
+                        byt->pc = op->p2;
+                        break ; 
+                    }
+                }
+
+                if (!found && size >= tot) {
+                    byt->pc = op->p2;
+                }
+
+                break;
+        
+  
+            case seek_lt : 
+                int size = 0 ; 
+                byt->btr[op->p1].depth = 0 ; 
+                uint32_t children = byt->btr[op->p1].start_root_num   ; 
+                page_header *hdr = pager_get_page(byt->pager , children) ; 
+                byt->btr[op->p1].stack[byt->btr[op->p1].depth] = (path_entry){children  , 0 } ; 
+                while ( hdr->page_type != LEAF ){
+                    int id = hdr->num_cells ; 
+                    for ( int i = 0 ; i < hdr->num_cells ; i++  ){
+                        void *cell = get_cell(hdr, i);
+                        reg cell_key = get_key_from_cell(cell);
+                        if (campare(byt->regis[op->p3], cell_key, cur->data_type) == 0) {
+                            id = i;
+                            break;
+                        }
+                    }
+                    children = get_child_pointer(byt->pager , children  ,id )  ; 
+                    hdr = (page_header*)pager_get_page(byte->pager,children  ) ; 
+                    size = size + hdr->num_cells ; 
+                    byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , id } ; 
+                }
+
+                int tot = byt->btr[op->p1].total - 1  ; 
+                int ans_id = -1 ; 
+                int found = 0 ; 
+                while ( size < tot  ){
+                    if(bs(hdr ,byt->regis[op->p3]  , byt->btr[op->p1].data_type ,&ans_id ,  campare_lt   ) == 1 ){
+                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , ans_id } ; 
+                        byt->btr[op->p1].page_num = children ; 
+                        byt->btr[op->p1].row_num = ans_id ; 
+                        found = 1 ; 
+                        break ; 
+                    }
+
+                    int kept = 0 ; 
+                    while ( byt->btr[op->p1].depth > 0 ){
+                        path_entry * ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                        page_header * hdr = pager_get_page(byt->pager , ptr->page_num) ; 
+                        if (ptr->cell_index + 1 < hdr->num_cells ){
+                                ptr->cell_index++ ; 
+                                 children = get_child_pointer(byt->pager , ptr->page_num ,ptr->cell_index ) ; 
+                                page_header *chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    while ( chdr->page_type != LEAF ){
+                                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , 0 } ; 
+                                        children = get_child_pointer(byt->pager , ptr->page_num  ,0 )  ; 
+                                        chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    }
+                                byt->btr[op->p1].stack[byt->btr[op->p1].depth++]  = (path_entry){children , 0 } ; 
+                                byt->btr[op->p1].page_num = children ; 
+                                byt->btr[op->p1].row_num++ ;  
+                                kept = 1 ; 
+                                size = size + chdr->num_cells ; 
+                                hdr = chdr ; 
+                                break ; 
+                        }
+                        byt->btr[op->p1].depth-- ; 
+                    }
+                    if (kept == 0 ){
+                        byt->pc = op->p2;
+                        break ; 
+                    }
+                }
+
+                if (!found && size >= tot) {
+                    byt->pc = op->p2;
+                }
+
+                break;
+        
+
+            case seek_gt : 
+                int size = 0 ; 
+                byt->btr[op->p1].depth = 0 ; 
+                uint32_t children = byt->btr[op->p1].start_root_num   ; 
+                page_header *hdr = pager_get_page(byt->pager , children) ; 
+                byt->btr[op->p1].stack[byt->btr[op->p1].depth] = (path_entry){children  , 0 } ; 
+                while ( hdr->page_type != LEAF ){
+                    int id = hdr->num_cells ; 
+                    for ( int i = 0 ; i < hdr->num_cells ; i++  ){
+                        void *cell = get_cell(hdr, i);
+                        reg cell_key = get_key_from_cell(cell);
+                        if (campare(byt->regis[op->p3], cell_key, cur->data_type) == 0) {
+                            id = i;
+                            break;
+                        }
+                    }
+                    children = get_child_pointer(byt->pager , children  ,id )  ; 
+                    hdr = (page_header*)pager_get_page(byte->pager,children  ) ; 
+                    size = size + hdr->num_cells ; 
+                    byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , id } ; 
+                }
+
+                int tot = byt->btr[op->p1].total - 1  ; 
+                int ans_id = -1 ; 
+                int found = 0 ; 
+                while ( size < tot  ){
+                    if(bs(hdr ,byt->regis[op->p3]  , byt->btr[op->p1].data_type ,&ans_id ,  campare_gt   ) == 1 ){
+                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , ans_id } ; 
+                        byt->btr[op->p1].page_num = children ; 
+                        byt->btr[op->p1].row_num = ans_id ; 
+                        found = 1 ; 
+                        break ; 
+                    }
+
+                    int kept = 0 ; 
+                    while ( byt->btr[op->p1].depth > 0 ){
+                        path_entry * ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
+                        page_header * hdr = pager_get_page(byt->pager , ptr->page_num) ; 
+                        if (ptr->cell_index + 1 < hdr->num_cells ){
+                                ptr->cell_index++ ; 
+                                 children = get_child_pointer(byt->pager , ptr->page_num ,ptr->cell_index ) ; 
+                                page_header *chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    while ( chdr->page_type != LEAF ){
+                                        byt->btr[op->p1].stack[byt->btr[op->p1].depth++] = (path_entry){children , 0 } ; 
+                                        children = get_child_pointer(byt->pager , ptr->page_num  ,0 )  ; 
+                                        chdr = (page_header*)pager_get_page(pager,children  ) ; 
+                                    }
+                                byt->btr[op->p1].stack[byt->btr[op->p1].depth++]  = (path_entry){children , 0 } ; 
+                                byt->btr[op->p1].page_num = children ; 
+                                byt->btr[op->p1].row_num++ ;  
+                                kept = 1 ; 
+                                size = size + chdr->num_cells ; 
+                                hdr = chdr ; 
+                                break ; 
+                        }
+                        byt->btr[op->p1].depth-- ; 
+                    }
+                    if (kept == 0 ){
+                        byt->pc = op->p2;
+                        break ; 
+                    }
+                }
+
+                if (!found && size >= tot) {
+                    byt->pc = op->p2;
+                }
+
+                break;
+        
+      
                 
 
 
@@ -7405,26 +8094,16 @@ void bytcode(byte *byt){
                 break ; 
 
             
-
+            case aggregate_step : 
+                char *  operation = *(char*)op->p4 ; 
+                 agg_operation(byt->agg[op->p1] , byt->regis[op->p2] , operation )  ; 
+                break ; 
 
 
                     }
                 }
                 
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 void process_query(){
