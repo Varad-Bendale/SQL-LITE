@@ -31,6 +31,17 @@ enum {
      open_read_op
 }
 
+typedef enum collation { 
+    COLL_BINARY,
+    COLL_NOCASE,
+    COLL_RTRIM 
+} ;
+
+typedef enum direction { 
+    ASC,
+    DESC 
+} ;
+
 typedef struct Pager{
     FILE *file ; 
 }
@@ -53,11 +64,6 @@ typedef struct reg{
         char *s ; 
         float r ; 
     }val ; 
-}
-
-typedef struct sorter{
-    reg regis[300] ; 
-    int num ; 
 }
 
 typedef struct path_entry{
@@ -91,6 +97,25 @@ typedef struct aggregate{
     int count ; 
 }
 
+typedef struct sort_arr{
+       unsigned char * array ; 
+       int len ;  
+}
+
+typedef struct key_info{
+    int feild ; 
+    collation * coll  ; 
+    direction * dir  ; 
+}
+
+typedef struct sorter{
+    int row_count ; 
+    sort_arr * array ; 
+    int capacity ;
+    char* cols_to_look ; 
+    int keycols;   
+}
+
 
 typedef struct byte{
     type prog[300] ; 
@@ -101,6 +126,7 @@ typedef struct byte{
     btree btr[300] ; 
     table *db ; 
     Pager *pager ; 
+    sorter * sort ; 
 }
 
 typedef struct page_header{
@@ -1409,18 +1435,20 @@ void bytcode(byte *byt){
                 end = false ; 
             
                 
-            case open_write_op
+            case open_write_op : 
                 byt->btr[op->p1].Table  = lookup_table(db , op->p2) ; 
                 byt->btr[op->p1].start_root_num  =  op->p2 ;
                 byt->btr[op->p1].page_num  =  op->p2 ;
                 byt->btr[op->p1].mode  = cursor_write ; 
                 end = false ; 
+                break ; 
             
             case close_cursor_op : 
                 if (byt->btr[op->p1] ==  NULL){
                     free(byt->btr[op->p1]) ; 
                     byt->btr[op->p1] =  NULL
                 }
+                break ; 
             
             case next_cursor : 
                  path_entry * ptr = &byt->btr[op->p1].stack[byt->btr[op->p1].depth - 1 ] ; 
@@ -1877,10 +1905,15 @@ void bytcode(byte *byt){
                 agg_final(byt->agg[op->p1] , byt->regis[op->p3] , operation) ; 
                 break ; 
 
-            case sorter_init : 
+            case sorter_open : 
+                byt->sort[op->p1].array = NULL ; 
+                byt->sort[op->p1].row_count = 0 ; 
+                byt->sort[op->p1].capacity = 0 ; 
+                byt->sort[op->p1].cols_to_look = op->p2  ; 
+                byt->sort[op->p1].keycols = op->p4  ; 
+                 
 
                     }
                 }
                 
         }
-
