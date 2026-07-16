@@ -193,6 +193,7 @@ int compare_sort(const void * a, const void * b , void * sorter_e  ){
     first->key = get_data_sort(first , sort->cols_to_look ,first->len , first->key_type  ) ;  
     sort_arr * second = (sort_arr * )b ; 
     second->key = get_data_sort(second , sort->cols_to_look ,second->len , second->key_type  ) ;  
+    int result = 0 ; 
     if ( first->key_type == integer_num && second->key_type == integer_num  ){
         long first_num ;
         memcpy(&first_num, first->key, sizeof(long));
@@ -200,42 +201,94 @@ int compare_sort(const void * a, const void * b , void * sorter_e  ){
         memcpy(&second_num, second->key, sizeof(long));
         if (first_num < second_num){
             if (sort->keyinfo.dir == DESC  ){
-                return -1 ; 
+                result =  1 ; 
             }
-            return 1 ; 
+            else { 
+                result = -1 ; 
+            }
         }
         else if (first_num > second_num){
-            if (sort->keyinfo.dir == ASC  ){
-                return 1 ; 
+            if (sort->keyinfo.dir == DESC  ){
+                result =  -1 ; 
             }
-            return -1 ; 
+            else { 
+                result = 1 ; 
+            }
         }
         else {
-            return 0 ; 
+            result =  0 ; 
         }
     }
-    else if ( ( first->key_type == real_num && second->key_type == real_num ) || ( first->key_type == integer_num && second->key_type == real_num )  ||  ( first->key_type == real_num && second->key_type == integer_num  )  ){
+    else if ( ( first->key_type == real_num && second->key_type == real_num )  ){
         float first_num ;
         memcpy(&first_num, first->key, sizeof(float));
         float second_num  ;
         memcpy(&second_num, second->key, sizeof(float));
         if (first_num < second_num){
             if (sort->keyinfo.dir == DESC  ){
-                return -1 ; 
+                result =  1 ; 
             }
-            return 1 ; 
+            else { 
+                 result =  -1 ; 
+            }
         }
         else if (first_num > second_num){
-            if (sort->keyinfo.dir == ASC  ){
-                return 1 ; 
+            if (sort->keyinfo.dir == DESC  ){
+                result =  -1 ; 
             }
-            return -1 ; 
+            else { 
+               result =  1 ; 
+            }
         }
         else {
-            return 0 ; 
+            result =  0 ; 
         }
     }
 
+    else if ( ( first->key_type == real_num && second->key_type == integer_num ) || ( first->key_type == integer_num && second->key_type == real_num )    ){
+        float first_num;
+        if (first->key_type == real_num) {
+            memcpy(&first_num, first->key, sizeof(float));
+        } 
+        else if (first->key_type == integer_num) {
+            long tmp;
+            memcpy(&tmp, first->key, sizeof(long));
+            first_num = (float)tmp;
+        }
+
+        float second_num;
+        if (second->key_type == real_num) {
+            memcpy(&second_num, second->key, sizeof(float));
+        } 
+        else if (second->key_type == integer_num) {
+            long tmp;
+            memcpy(&tmp, second->key, sizeof(long));
+            second_num = (float)tmp;
+        }
+        if (first_num < second_num){
+            if (sort->keyinfo.dir == DESC  ){
+                result =  1 ; 
+            }
+            else { 
+                result = -1 ; 
+            }
+        }
+        else if (first_num > second_num){
+            if (sort->keyinfo.dir == DESC  ){
+                result =  -1 ; 
+            }
+            else {
+                result = 1 ; 
+            }
+        }
+        else {
+            result =  0 ; 
+        }
+    }
+
+
+
+    
     else if (first->key_type  == string_num && second->key_type == string_num ){
         if (sort->keyinfo.coll == BINARY  ){
             int num_1 = 0 ; 
@@ -257,18 +310,22 @@ int compare_sort(const void * a, const void * b , void * sorter_e  ){
             }
             if (num_2 > num_1){
                 if (sort->keyinfo.dir == DESC  ){
-                    return -1 ; 
+                    result =  1 ; 
                 }
-                return 1 ;
+                else {
+                    result = -1 ; 
+                }
             }
             else if (num_2 < num_1){
                 if (sort->keyinfo.dir == DESC  ){
-                    return 1 ; 
+                    result =  -1 ; 
                 }
-                return -1 ;
+                else { 
+                    result = 1 ; 
+                }
             }
             else {
-                return 0 ; 
+                result =  0 ; 
             }
         }    
 
@@ -292,18 +349,22 @@ int compare_sort(const void * a, const void * b , void * sorter_e  ){
             }
             if (num_2 > num_1){
                 if (sort->keyinfo.dir == DESC  ){
-                    return -1 ; 
+                    result =  1 ; 
                 }
-                return 1 ;
+                else { 
+                    result = -1 ; 
+                }
             }
             else if (num_2 < num_1){
                 if (sort->keyinfo.dir == DESC  ){
-                    return 1 ; 
+                    result =  -1 ; 
                 }
-                return -1 ;
+                else { 
+                    result = 1 ; 
+                }
             }
             else {
-                return 0 ; 
+                result =  0 ; 
             }
         }   
 
@@ -325,41 +386,43 @@ int compare_sort(const void * a, const void * b , void * sorter_e  ){
             len_2++ ; 
 
             while (  num_1 == num_2  ) {
-                if (i < first->len ){
+                if (i <len_1 ){
                     num_1 = num_1 + (int)first->key[i]; 
                     i++ ; 
                 } 
-                if ( j < second->len  ){
+                if ( j < len_2 ){
                     num_2 = num_2 + (int)second->key[j]  ;        
                     j++ ;  
                 }      
-                if ( i >= first->len &&  j >= second->len   ) {
+                if ( i >= len_1 &&  j >= len_2   ) {
                     break ; 
                 }
             }
             if (num_2 > num_1){
                 if (sort->keyinfo.dir == DESC  ){
-                    return -1 ; 
+                    result =  1 ; 
                 }
-                return 1 ;
+                else { 
+                    result = -1 ; 
+                }
             }
             else if (num_2 < num_1){
                 if (sort->keyinfo.dir == DESC  ){
-                    return 1 ; 
+                    result =  -1 ; 
                 }
-                return -1 ;
+                else { 
+                    result = 1 ; 
+                }
             }
             else {
-                return 0 ; 
+                result =  0 ; 
             }
         }   
 
-
-
-
     }
-
-return 0 ; 
+    free(first->key) ; 
+    free(second->key) ; 
+    return result ; 
 }
 
 
@@ -2139,7 +2202,7 @@ void bytcode(byte *byt){
             case sortersort : 
                 byt->sort[op->p1] ; 
                 qsort_r(byt->sort[op->p1].array  ,byt->sort[op->p1].keycols , sizeof(sort_arr) , campare_sort  , byt->sort[op->p1] ) ; 
-                
+                break ; 
 
 
             }
