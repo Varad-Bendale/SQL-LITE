@@ -32,13 +32,13 @@ enum {
 }
 
 typedef enum collation { 
-    COLL_BINARY,
-    COLL_NOCASE,
-    COLL_RTRIM 
+    BINARY = 1 ,
+    NOCASE,
+    RTRIM 
 } ;
 
 typedef enum direction { 
-    ASC,
+    ASC = 1 ,
     DESC 
 } ;
 
@@ -98,11 +98,13 @@ typedef struct aggregate{
 }
 
 typedef struct sort_arr{
+       unsigned char * key ; 
+       int key_type ; 
        unsigned char * array ; 
        int len ;  
 }
 
-typedef struct key_info{
+typedef struct Key_info{
     int feild ; 
     collation * coll  ; 
     direction * dir  ; 
@@ -112,10 +114,59 @@ typedef struct sorter{
     int row_count ; 
     sort_arr * array ; 
     int capacity ;
-    char* cols_to_look ; 
-    int keycols;   
+    int keycols;  
+    int  cols_to_look ;  
+    Key_info * keyinfo ; 
 }
 
+
+int count = 0 ; 
+sorter[op->p1]->array[count].key = get_data_sort( sorter[op->p1]->array[count] , sorter[op->p1].cols_to_look  ) ; 
+
+
+unsigned char * get_data_sort(sort_arr thing , int key , int * lenght , int * type ){
+    thing->array + key + 1  ; 
+    int pos = 0 ; 
+    unsigned char * temp = thing[pos] ; 
+    for ( int i =  0 ; i < key ; i++ ){
+        temp = thing[pos] ; 
+        if (temp == integer_num){
+            pos = pos + sizeof(long) ; 
+        }
+        else if (temp == real_num){
+            pos = pos + sizeof(float ) ;   
+        }
+        else if (temp == string_num ){
+            uint32_t size ; 
+            memcpy(&size , thing + pos , sizeof(uint32_t)) ; 
+            pos = pos + sizeof(uint32_t) ; 
+            pos = pos + size ; 
+        }
+    }
+    temp = thing[pos] ; 
+    int len ; 
+    pos = pos + 1 ; 
+    if (temp == integer_num){
+        len =  sizeof(long) ; 
+        type = integer_num ; 
+    }
+    else if (temp == real_num){
+        len =  sizeof(float ) ; 
+        type =  real_num ; 
+    }
+    else if (temp == string_num ){
+        uint32_t size ; 
+        memcpy(&size , thing + pos , sizeof(uint32_t)) ; 
+        len =  sizeof(uint32_t) ; 
+        len = len + size ; 
+        type = string_num ; 
+    }
+
+    unsigned char * ans = malloc(len ) ; 
+    memcpy(ans , thing + pos   , len ) ; 
+    *lenght = len ; 
+    return ans  ; 
+}
 
 typedef struct byte{
     type prog[300] ; 
@@ -136,6 +187,180 @@ typedef struct page_header{
 }__attribute__((packed)) 
 
 
+int compare_sort(const void * a, const void * b , void * sorter_e  ){
+     sorter sort = (sorter *)sorter_e ; 
+    sort_arr * first = (sort_arr * )a ; 
+    first->key = get_data_sort(first , sort->cols_to_look ,first->len , first->key_type  ) ;  
+    sort_arr * second = (sort_arr * )b ; 
+    second->key = get_data_sort(second , sort->cols_to_look ,second->len , second->key_type  ) ;  
+    if ( first->key_type == integer_num && second->key_type == integer_num  ){
+        long first_num ;
+        memcpy(&first_num, first->key, sizeof(long));
+        long second_num  ;
+        memcpy(&second_num, second->key, sizeof(long));
+        if (first_num < second_num){
+            if (sort->keyinfo.dir == DESC  ){
+                return -1 ; 
+            }
+            return 1 ; 
+        }
+        else if (first_num > second_num){
+            if (sort->keyinfo.dir == ASC  ){
+                return 1 ; 
+            }
+            return -1 ; 
+        }
+        else {
+            return 0 ; 
+        }
+    }
+    else if ( ( first->key_type == real_num && second->key_type == real_num ) || ( first->key_type == integer_num && second->key_type == real_num )  ||  ( first->key_type == real_num && second->key_type == integer_num  )  ){
+        float first_num ;
+        memcpy(&first_num, first->key, sizeof(float));
+        float second_num  ;
+        memcpy(&second_num, second->key, sizeof(float));
+        if (first_num < second_num){
+            if (sort->keyinfo.dir == DESC  ){
+                return -1 ; 
+            }
+            return 1 ; 
+        }
+        else if (first_num > second_num){
+            if (sort->keyinfo.dir == ASC  ){
+                return 1 ; 
+            }
+            return -1 ; 
+        }
+        else {
+            return 0 ; 
+        }
+    }
+
+    else if (first->key_type  == string_num && second->key_type == string_num ){
+        if (sort->keyinfo.coll == BINARY  ){
+            int num_1 = 0 ; 
+            int num_2 = 0 ;
+            int i = 0 ; 
+            int j = 0  ; 
+            while (  num_1 == num_2  ) {
+                if (i < first->len ){
+                    num_1 = num_1 + (int)first->key[i] ; 
+                    i++ ; 
+                } 
+                if ( j < second->len  ){
+                    num_2 = num_2 + (int)second->key[j] ;        
+                    j++ ;  
+                }      
+                if ( i >= first->len &&  j >= second->len   ) {
+                    break ; 
+                }
+            }
+            if (num_2 > num_1){
+                if (sort->keyinfo.dir == DESC  ){
+                    return -1 ; 
+                }
+                return 1 ;
+            }
+            else if (num_2 < num_1){
+                if (sort->keyinfo.dir == DESC  ){
+                    return 1 ; 
+                }
+                return -1 ;
+            }
+            else {
+                return 0 ; 
+            }
+        }    
+
+        else if (sort->keyinfo.coll == NOCASE  ){
+            int num_1 = 0 ; 
+            int num_2 = 0 ;
+            int i = 0 ; 
+            int j = 0  ; 
+            while (  num_1 == num_2  ) {
+                if (i < first->len ){
+                    num_1 = num_1 + (int)to_lowercase(first->key[i]) ; 
+                    i++ ; 
+                } 
+                if ( j < second->len  ){
+                    num_2 = num_2 + (int)to_lowercase(second->key[j] )  ;        
+                    j++ ;  
+                }      
+                if ( i >= first->len &&  j >= second->len   ) {
+                    break ; 
+                }
+            }
+            if (num_2 > num_1){
+                if (sort->keyinfo.dir == DESC  ){
+                    return -1 ; 
+                }
+                return 1 ;
+            }
+            else if (num_2 < num_1){
+                if (sort->keyinfo.dir == DESC  ){
+                    return 1 ; 
+                }
+                return -1 ;
+            }
+            else {
+                return 0 ; 
+            }
+        }   
+
+        else if (sort->keyinfo.coll == RTRIM  ){
+            int num_1 = 0 ; 
+            int num_2 = 0 ;
+            int i = 0 ; 
+            int j = 0  ; 
+            int len_1  = first->len -  1   ; 
+            while( len_1 >= 0 && first->key[len_1] == ' '){
+                len_1-- ; 
+            }
+            len_1++ ; 
+
+            int len_2  = second->len - 1   ; 
+            while( len_2 >= 0 && second->key[len_2] == ' '){
+                len_2-- ; 
+            }
+            len_2++ ; 
+
+            while (  num_1 == num_2  ) {
+                if (i < first->len ){
+                    num_1 = num_1 + (int)first->key[i]; 
+                    i++ ; 
+                } 
+                if ( j < second->len  ){
+                    num_2 = num_2 + (int)second->key[j]  ;        
+                    j++ ;  
+                }      
+                if ( i >= first->len &&  j >= second->len   ) {
+                    break ; 
+                }
+            }
+            if (num_2 > num_1){
+                if (sort->keyinfo.dir == DESC  ){
+                    return -1 ; 
+                }
+                return 1 ;
+            }
+            else if (num_2 < num_1){
+                if (sort->keyinfo.dir == DESC  ){
+                    return 1 ; 
+                }
+                return -1 ;
+            }
+            else {
+                return 0 ; 
+            }
+        }   
+
+
+
+
+    }
+
+return 0 ; 
+}
 
 
 void *pager_get_page(Pager *pager, uint32_t page_num) {
@@ -144,9 +369,6 @@ void *pager_get_page(Pager *pager, uint32_t page_num) {
     fread(buf, 1, PAGE_SIZE, pager->file);
     return buf;
 }
-
-
-
 
 uint32_t get_child_pointer(Pager * pager ,uint32_t page_num , uint16_t cell_index ){
     uint8_t *raw = pager_get_page(pager , page_num ) ; 
@@ -160,8 +382,6 @@ void *get_cell(void *node, uint32_t cell_num) {
     char *base = (char*)node;              
     return base + sizeof(page_header) + (cell_num * CELL_SIZE);
 }
-
-
 
 int campare_ge(reg target , void * cell_key , int  data_type ){
    if (target->type == integer_num){
@@ -427,7 +647,6 @@ int campare_le(reg target , void * cell_key , int  data_type ){
     }
 }
 
-
 int bs( void * node , reg target  , int data_type  , int *index  , int (*function_name)(reg, void*, int)){
     int low = 0 ; 
     int high = node->num_cells - 1 ; 
@@ -455,8 +674,6 @@ int bs( void * node , reg target  , int data_type  , int *index  , int (*functio
     return 0 ; 
 
 }
-
-
 
 void agg_operation( aggregate *ans  , reg *num ,  char *  operation ){
     if (strcmp(operation , "SUM") == 0 ){
@@ -1912,8 +2129,27 @@ void bytcode(byte *byt){
                 byt->sort[op->p1].cols_to_look = op->p2  ; 
                 byt->sort[op->p1].keycols = op->p4  ; 
                  
-
-                    }
-                }
+            case sorter_insert : 
+                if (byt->sort[op->p1].row_count == byt->sort[op->p1].capacity ){
+                     byt->sort[op->p1].capacity++ ; 
+                     byt->sort[op->p1].array = realloc( byt->sort[op->p1].array  ,  byt->sort[op->p1].capacity* sizeof(byt->sort[op->p1].array )) ; 
+                } 
+                byt->sort[op->p1].array[byt->sort[op->p1].row_count] = byt->regis[op->p2] ; 
+            
+            case sortersort : 
+                byt->sort[op->p1] ; 
+                qsort_r(byt->sort[op->p1].array  ,byt->sort[op->p1].keycols , sizeof(sort_arr) , campare_sort  , byt->sort[op->p1] ) ; 
                 
+
+
+            }
         }
+        
+}
+
+
+
+
+
+
+
