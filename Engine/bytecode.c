@@ -115,6 +115,7 @@ typedef struct sorter{
     sort_arr * array ; 
     int capacity ;
     int keycols;  
+    int cursor ; 
     int  cols_to_look ;  
     Key_info * keyinfo ; 
 }
@@ -2122,10 +2123,6 @@ void bytcode(byte *byt){
                 }
 
                 break;
-        
-      
-                
-
 
             case if_op : 
               reg * temp = &byt->regis[op->p1];
@@ -2191,24 +2188,102 @@ void bytcode(byte *byt){
                 byt->sort[op->p1].capacity = 0 ; 
                 byt->sort[op->p1].cols_to_look = op->p2  ; 
                 byt->sort[op->p1].keycols = op->p4  ; 
+                byt->sort[op->p1].cursor = 0 ;  
                  
             case sorter_insert : 
-                if (byt->sort[op->p1].row_count == byt->sort[op->p1].capacity ){
-                     byt->sort[op->p1].capacity++ ; 
-                     byt->sort[op->p1].array = realloc( byt->sort[op->p1].array  ,  byt->sort[op->p1].capacity* sizeof(byt->sort[op->p1].array )) ; 
-                } 
-                byt->sort[op->p1].array[byt->sort[op->p1].row_count] = byt->regis[op->p2] ; 
+               if (byt->sort[op->p1].row_count == byt->sort[op->p1].capacity) {
+                    if (byt->sort[op->p1].capacity == 0 ){
+                        byt->sort[op->p1].capacity  = 4  ; 
+                    }
+                    else if (byt->sort[op->p1].capacity > 0 ){
+                        byt->sort[op->p1].capacity  = byt->sort[op->p1].capacity*2   ; 
+                    }
+                    byt->sort[op->p1].capacity = byt->sort[op->p1].capacity == 0 ? 4 : byt->sort[op->p1].capacity * 2;  
+                    sort_arr **tmp = realloc( byt->sort[op->p1].array, byt->sort[op->p1].capacity * sizeof(*byt->sort[op->p1].array)   );
+                    if (tmp == NULL) { 
+                        break; 
+                    }
+                    byt->sort[op->p1].array = tmp;
+                }
+                byt->sort[op->p1].array[byt->sort[op->p1].row_count++ ] = byt->regis[op->p2] ; 
+                break ; 
             
+
+
+                
             case sortersort : 
                 byt->sort[op->p1] ; 
                 qsort_r(byt->sort[op->p1].array  ,byt->sort[op->p1].keycols , sizeof(sort_arr) , campare_sort  , byt->sort[op->p1] ) ; 
                 break ; 
 
 
+            case sorter_next : 
+                if (byt->sort[op->p1].cursor < byt->sort[op->p1].row_count ){
+                    byt->sort[op->p1].cursor++ ; 
+                    byt->pc = op->p2; 
+                }
+                break ; 
+
+            
+            case sorter_data : 
+                sort_arr *temp =  byt->sort[op->p1].array ; 
+                byt->regis[op->p2].lenght = temp->len[ byt->sort[op->p1].cursor]  ; 
+                byt->regis[op->p2].type =  blob_op ; 
+                byt->regis[op->p2].val.s = temp->array[ byt->sort[op->p1].cursor]  ; 
+                break ; 
+
+
+
+
+            case sorter_campare : 
+                sort_arr *temp =  byt->sort[op->p1].array ; 
+                if ( temp->key_type[byt->sort[op->p1].cursor] == integer_num && byt->regis[op->p3].type == integer_num  ){
+                    int comp ; 
+                    memcpy(&comp, temp->key[byt->sort[op->p1].cursor] , sizeof(int));
+                    int comp = (int)temp->key[byt->sort[op->p1].cursor]  ; 
+                    if (comp == byt->regis[op->p3].val.i ){
+                        byt->pc = op->p2;
+                    }
+                }
+                else if ( temp->key_type[byt->sort[op->p1].cursor]  == real_num && byt->regis[op->p3].type == real_num  ){
+                    float comp  ;
+                    memcpy(&comp, temp->key[byt->sort[op->p1].cursor], sizeof(float));
+                    if (comp == byt->regis[op->p3].val.r ){
+                        byt->pc = op->p2;
+                    }
+                }
+
+                else if (byt->regis[op->p3].type == real_num && temp->key_type[byt->sort[op->p1].cursor]  == integer_num   ){
+                    float comp  ;
+                    memcpy(&comp, temp->key[byt->sort[op->p1].cursor], sizeof(float));
+                    if (comp == byt->regis[op->p3].val.r ){
+                        byt->pc = op->p2;
+                    }
+                }
+
+                else if (temp->key_type[byt->sort[op->p1].cursor]  == real_num && byt->regis[op->p3].type == integer_num   ){
+                    float comp  ;
+                    memcpy(&comp, temp->key[byt->sort[op->p1].cursor], sizeof(float));
+                    float num  = (float)( byt->regis[op->p3].val.i ) ; 
+                    if (comp == byt->regis[op->p3].val.r ){
+                        byt->pc = op->p2;
+                    }
+                }
+                else if (temp->key_type[byt->sort[op->p1].cursor] == string_num && byt->regis[op->p3].type == string_num ){
+                    if (strcmp(temp->key[byt->sort[op->p1].cursor] ,byt->regis[op->p3].val.s ) == 0 ){
+                        byt->pc = op->p2;
+                    }
+                }
+                break ; 
             }
         }
         
 }
+
+
+
+
+
 
 
 
