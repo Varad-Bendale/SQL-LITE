@@ -2366,6 +2366,11 @@ bytecode {
                         }
                     }
                     break ; 
+
+
+                case make_record :
+                    
+                    
                 }
             }
             
@@ -2376,8 +2381,32 @@ bytecode {
 
 
 
+int like_campare(reg *a , reg *b ){
+    int ans = 0 ; 
+    if (a->type == string_num && b->type == string_num ){
+        int first = 0 ; 
+        int second = 0 ; 
+        while ( first < a->len && second < b->len ){
+            if (strcmp(a->val.s[first] , b->val.s[second] ) == 0 ){
+                first++ ; 
+                second++ ; 
+            }
+            else if (strcmp(a->val.s[first] , '%' ) == 0 ){
+                
+            }
+            else if ( strcmp(a->val.s[first] , "_" ) == 0 ){
+                int first_temp = first ;  
+            }
+        }
+    }
+}
 
 
+
+
+unsigned char * make_record_data(byte * byt , int start , int end ){
+    
+}
 
 
 
