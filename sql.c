@@ -6296,6 +6296,7 @@ bytecode {
         lt_op , 
         le_op , 
         ge_op , 
+        end_num , 
         cursor_read , 
         boolean_op , 
         cursor_write  , 
@@ -6356,6 +6357,7 @@ bytecode {
         int mode ; 
         int depth ; 
         path_entry stack[300] ; 
+        bool null ; 
     }
 
     typedef struct aggregate{
@@ -6397,12 +6399,44 @@ bytecode {
     sorter[op->p1]->array[count].key = get_data_sort( sorter[op->p1]->array[count] , sorter[op->p1].cols_to_look  ) ; 
 
 
+
+    unsigned char * make_record_data(byte * byt , int start , int end ){
+        unsigned char *ans[300] ; 
+        int pos = 0 ; 
+        reg temp = byt->regis[start] ; 
+        for ( int i = start ; i <= end ; i++ ){
+            temp = byt->regis[i] ; 
+            memcpy( ans + pos  , temp->type  , 1   ) ; 
+            pos = pos + 1 ; 
+            if (temp->type == integer_num ){
+                memcpy(ans + pos , temp->val.i , sizeof(int)) ; 
+                pos  = pos + sizeof(int) ; 
+            }
+            else if (temp->type == real_num ){
+                memcpy(ans + pos , temp->val.i , sizeof(float)) ; 
+                pos  = pos + sizeof(float) ; 
+            }
+            else if (temp->type == string_num || temp->type == blob_num  ){
+                memcpy( ans + pos , temp->lenght , sizeof(int)) ; 
+                pos = pos + sizeof(int) ; 
+                memcpy(ans + pos , temp->val.s , temp->lenght ) ; 
+                pos = pos + temp->lenght  ; 
+            }
+        }
+        return ans ; 
+    }
+
+
+
+
+
     unsigned char * get_data_sort(sort_arr thing , int key , int * lenght , int * type ){
         thing->array + key + 1  ; 
         int pos = 0 ; 
         unsigned char * temp = thing[pos] ; 
         for ( int i =  0 ; i < key ; i++ ){
             temp = thing[pos] ; 
+            pos = pos + 1 ; 
             if (temp == integer_num){
                 pos = pos + sizeof(long) ; 
             }
@@ -6446,6 +6480,9 @@ bytecode {
         int prog_count ; 
         int ins_count ; 
         reg regis[300] ; 
+        int reg_start ; 
+        int reg_end ; 
+        int reg_mode ; 
         aggregate agg[300] ; 
         btree btr[300] ; 
         table *db ; 
@@ -6720,7 +6757,7 @@ bytecode {
     }
 
     int campare_ge(reg target , void * cell_key , int  data_type ){
-    if (target->type == integer_num){
+      if (target->type == integer_num){
             if (data_type == 1 ){
                 uint32_t num = *(uint32_t*)cell_key ; 
                 if (num >= target->val.i){
@@ -6786,7 +6823,7 @@ bytecode {
     }
 
     int campare_gt(reg target , void * cell_key , int  data_type ){
-    if (target->type == integer_num){
+     if (target->type == integer_num){
             if (data_type == 1 ){
                 uint32_t num = *(uint32_t*)cell_key ; 
                 if (num > target->val.i){
@@ -6852,7 +6889,7 @@ bytecode {
     }
 
     int campare_lt(reg target , void * cell_key , int  data_type ){
-    if (target->type == integer_num){
+     if (target->type == integer_num){
             if (data_type == 1 ){
                 uint32_t num = *(uint32_t*)cell_key ; 
                 if (num < target->val.i){
@@ -6918,69 +6955,69 @@ bytecode {
     }
 
     int campare_le(reg target , void * cell_key , int  data_type ){
-    if (target->type == integer_num){
-            if (data_type == 1 ){
-                uint32_t num = *(uint32_t*)cell_key ; 
-                if (num <= target->val.i){
-                    return 0 ; 
-                }
-                else {
-                    return -1 ; 
-                }
-            }
-            else if (data_type == 2 ){
-                float num = *(float*)cell_key ; 
-                int num_temp = int(num) ; 
-                if (num_temp <= target->val.i){
-                    return 0 ; 
-                }
-                else {
-                    return -1 ; 
-                }
-            }
-            else {
-                return -1 ; 
-            }
-        }
-        else if ( target->type == real_num ){
-            if (data_type == 1 ){
-                uint32_t num_temp = *(uint32_t*)cell_key ; 
-                float num = (float)num_temp ; 
-                if (num <= target->val.r){
-                    return 0 ; 
-                }
-                else {
-                    return -1 ; 
-                }
-            }
-            if (data_type == 2 ){
-                float num = *(float*)cell_key ; 
-                if (num <= target->val.r){
-                    return 0 ; 
-                }
-                else {
-                    return -1 ; 
-                }
-            }
-            else { 
-                return -1 ; 
-            }
-        }
-        else { 
-            if (data_type == 3 ){
-                char *str_temp = (char *)cell_key; 
-                int len = strlen(str_temp) ; 
-                    if (strlen(target->val.s) <= (size_t)len ? strncmp(target->val.s, str_temp, len) >= 0 : strncmp(target->val.s, str_temp, strlen(target->val.s)) > 0){
+        if (target->type == integer_num){
+                if (data_type == 1 ){
+                    uint32_t num = *(uint32_t*)cell_key ; 
+                    if (num <= target->val.i){
                         return 0 ; 
                     }
-                    else { 
-                        return -1 
-                    } 
+                    else {
+                        return -1 ; 
+                    }
+                }
+                else if (data_type == 2 ){
+                    float num = *(float*)cell_key ; 
+                    int num_temp = int(num) ; 
+                    if (num_temp <= target->val.i){
+                        return 0 ; 
+                    }
+                    else {
+                        return -1 ; 
+                    }
+                }
+                else {
+                    return -1 ; 
+                }
+            }
+            else if ( target->type == real_num ){
+                if (data_type == 1 ){
+                    uint32_t num_temp = *(uint32_t*)cell_key ; 
+                    float num = (float)num_temp ; 
+                    if (num <= target->val.r){
+                        return 0 ; 
+                    }
+                    else {
+                        return -1 ; 
+                    }
+                }
+                if (data_type == 2 ){
+                    float num = *(float*)cell_key ; 
+                    if (num <= target->val.r){
+                        return 0 ; 
+                    }
+                    else {
+                        return -1 ; 
+                    }
+                }
+                else { 
+                    return -1 ; 
+                }
             }
             else { 
-                return -1 ; 
+                if (data_type == 3 ){
+                    char *str_temp = (char *)cell_key; 
+                    int len = strlen(str_temp) ; 
+                        if (strlen(target->val.s) <= (size_t)len ? strncmp(target->val.s, str_temp, len) >= 0 : strncmp(target->val.s, str_temp, strlen(target->val.s)) > 0){
+                            return 0 ; 
+                        }
+                        else { 
+                            return -1 
+                        } 
+                }
+                else { 
+                    return -1 ; 
+                }
             }
-        }
     }
 
     int bs( void * node , reg target  , int data_type  , int *index  , int (*function_name)(reg, void*, int)){
@@ -8420,27 +8457,27 @@ bytecode {
                     break;
 
                 case if_op : 
-                reg * temp = &byt->regis[op->p1];
-                int check = 0 ; 
-                    if (temp->type == integer_num ){
-                        if (temp.val.i != 0 ){
-                            check = 1 ; 
-                        } 
-                    }
-                    else if (temp->type == real_num){
-                        if (temp.val.r != 0.0 ){
-                            check = 1 ; 
-                        } 
-                    }
-                    else if(temp->type == string_num) {
-                        if (temp->lenght > 0 ){
-                            check = 1 ; 
+                    reg * temp = &byt->regis[op->p1];
+                    int check = 0 ; 
+                        if (temp->type == integer_num ){
+                            if (temp.val.i != 0 ){
+                                check = 1 ; 
+                            } 
                         }
-                    }
-                    if ( check == 1 ){
-                        byt->pc = op->p2;
-                    }
-                    break ; 
+                        else if (temp->type == real_num){
+                            if (temp.val.r != 0.0 ){
+                                check = 1 ; 
+                            } 
+                        }
+                        else if(temp->type == string_num) {
+                            if (temp->lenght > 0 ){
+                                check = 1 ; 
+                            }
+                        }
+                        if ( check == 1 ){
+                            byt->pc = op->p2;
+                        }
+                        break ; 
 
                 case is_null : 
                     if (byt->regis[op->p1].type == null_op ){
@@ -8472,7 +8509,7 @@ bytecode {
                     }
                     break ; 
                 
-                case if_op : 
+                case or_op : 
                     if (byt->regis[op->p1].type != string_op && byt->regis[op->p2].type != string_op  ){
                         byt->regis[op->p3].type = integer_num ; 
                         if (byt->regis[op->p1].type == integer_num && byt->regis[op->p2].type == integer_num   ){
@@ -8493,27 +8530,27 @@ bytecode {
                 
 
                 case if_not_op : 
-                reg * temp = &byt->regis[op->p1];
-                int check = 0 ; 
-                    if (temp->type == integer_num ){
-                        if (temp.val.i == 0 ){
-                            check = 1 ; 
-                        } 
-                    }
-                    else if (temp->type == real_num){
-                        if (temp.val.r == 0.0 ){
-                            check = 1 ; 
-                        } 
-                    }
-                    else if(temp->type == string_num) {
-                        if (temp->lenght == 0 ){
-                            check = 1 ; 
+                    reg * temp = &byt->regis[op->p1];
+                    int check = 0 ; 
+                        if (temp->type == integer_num ){
+                            if (temp.val.i == 0 ){
+                                check = 1 ; 
+                            } 
                         }
-                    }
-                    if ( check == 1 ){
-                        byt->pc = op->p2;
-                    }
-                    break ; 
+                        else if (temp->type == real_num){
+                            if (temp.val.r == 0.0 ){
+                                check = 1 ; 
+                            } 
+                        }
+                        else if(temp->type == string_num) {
+                            if (temp->lenght == 0 ){
+                                check = 1 ; 
+                            }
+                        }
+                        if ( check == 1 ){
+                            byt->pc = op->p2;
+                        }
+                        break ; 
 
                 case aggregate_init : 
                     byt->agg[op->p1].total = 0 ; 
@@ -8552,23 +8589,23 @@ bytecode {
                     byt->sort[op->p1].cursor = 0 ;  
                     
                 case sorter_insert : 
-                if (byt->sort[op->p1].row_count == byt->sort[op->p1].capacity) {
-                        if (byt->sort[op->p1].capacity == 0 ){
-                            byt->sort[op->p1].capacity  = 4  ; 
+                    if (byt->sort[op->p1].row_count == byt->sort[op->p1].capacity) {
+                            if (byt->sort[op->p1].capacity == 0 ){
+                                byt->sort[op->p1].capacity  = 4  ; 
+                            }
+                            else if (byt->sort[op->p1].capacity > 0 ){
+                                byt->sort[op->p1].capacity  = byt->sort[op->p1].capacity*2   ; 
+                            }
+                            byt->sort[op->p1].capacity = byt->sort[op->p1].capacity == 0 ? 4 : byt->sort[op->p1].capacity * 2;  
+                            sort_arr **tmp = realloc( byt->sort[op->p1].array, byt->sort[op->p1].capacity * sizeof(*byt->sort[op->p1].array)   );
+                            if (tmp == NULL) { 
+                                break; 
+                            }
+                            byt->sort[op->p1].array = tmp;
                         }
-                        else if (byt->sort[op->p1].capacity > 0 ){
-                            byt->sort[op->p1].capacity  = byt->sort[op->p1].capacity*2   ; 
-                        }
-                        byt->sort[op->p1].capacity = byt->sort[op->p1].capacity == 0 ? 4 : byt->sort[op->p1].capacity * 2;  
-                        sort_arr **tmp = realloc( byt->sort[op->p1].array, byt->sort[op->p1].capacity * sizeof(*byt->sort[op->p1].array)   );
-                        if (tmp == NULL) { 
-                            break; 
-                        }
-                        byt->sort[op->p1].array = tmp;
-                    }
-                    byt->sort[op->p1].array[byt->sort[op->p1].row_count++ ] = byt->regis[op->p2] ; 
-                    break ; 
-                
+                        byt->sort[op->p1].array[byt->sort[op->p1].row_count++ ] = byt->regis[op->p2] ; 
+                        break ; 
+                    
 
 
                     
@@ -8636,10 +8673,127 @@ bytecode {
                         }
                     }
                     break ; 
+
+
+                case column_op : 
+                    if (byt->btr[op->p1].null == true ){
+                        break ; 
+                    }
+                    void * temp = pager_get_page( byt->pager , byt->btr[op->p1].stack[depth].page_num  ) ; 
+                    void * cell = get_cell(temp , byt->btr[op->p1].stack[depth].cell_num  ) ; 
+                    reg tempo = get_key_from_cell(cell) ; 
+                    int pos = 0 ;
+                    unsigned char thing = tempo->val.s ; 
+                    unsigned char temp = thing[pos] ;  
+                    int key = op->p2 ; 
+                    reg * ans = byt->regis[op->p3] ; 
+                    for ( int i =  0 ; i < key ; i++ ){
+                        temp = thing[pos] ; 
+                        pos = pos + 1;  
+                        if (temp == integer_num){
+                            pos = pos + sizeof(long) ; 
+                        }
+                        else if (temp == real_num){
+                            pos = pos + sizeof(float ) ;   
+                        }
+                        else if (temp == string_num ){
+                            uint32_t size ; 
+                            memcpy(&size , thing + pos , sizeof(uint32_t)) ; 
+                            pos = pos + sizeof(uint32_t) ; 
+                            pos = pos + size ; 
+                        }
+                    }
+
+                    int len = 0  ; 
+                    pos = pos + 1 ; 
+                    if (temp == integer_num){
+                        len =  sizeof(long) ; 
+                        ans->type = integer_num ; 
+                    }
+                    else if (temp == real_num){
+                        len =  sizeof(float ) ; 
+                        ans->type =  real_num ; 
+                    }
+                    else if (temp == string_num ){
+                        uint32_t size ; 
+                        memcpy(&size , thing + pos , sizeof(uint32_t)) ; 
+                        len =  sizeof(uint32_t) ; 
+                        len = len + size ; 
+                        ans->type = string_num ; 
+                    }
+
+                    unsigned char * valli = malloc(len ) ; 
+                    memcpy(valli , thing + pos   , len ) ; 
+                    if (ans->type == integer_num ){
+                        ans->val.i = (int)valli ;  
+                    }
+                    else if (ans->type == real_num ){
+                        ans->val.r = (float)valli ;     
+                    }
+                    else {
+                        ans->val.s = valli ; 
+                        ans->lenght = len ; 
+                    }
+                    byt->btr[op->p1].null == false ; 
+                    break ; 
+                    
+                    
+                case make_record : 
+                   byt->reg[op->p3].type = string_num ; 
+                   byt->reg[op->p3].val.s = make_record_data(byt , op->p1 , op->p1 + op->p2 ) ; 
+                   byt->reg[op->p3].lenght = strlen(byt->reg[op->p3].val.s) ; 
+                   break ; 
+                
+                case result_row : 
+                    byt->reg_start = op->p1 ; 
+                    byt->reg_end = byt->reg_start  + op->p2 ; 
+                    byt->reg_mode = end_num ; 
+              
+                case limit_op : 
+                    if (byt->reg[op->p1].val.i > 0 ){
+                        byt->reg[op->p1].val.i-- ; 
+                        if (byt->reg[op->p1].val.i == 0  ){
+                            byt->pc = op->p2;
+                            continue ; 
+                        }
+                    } break ; 
+
+                case null_join_op : 
+                    byt->btr[op->p1].null = true ; 
+                    break ; 
+           
                 }
             }
             
     }
+
+
+
+
+    int like_campare(reg *a , reg *b ){
+        int ans = 0 ; 
+        if (a->type == string_num && b->type == string_num ){
+            int first = 0 ; 
+            int second = 0 ; 
+            while ( first < a->len && second < b->len ){
+                if (strcmp(a->val.s[first] , b->val.s[second] ) == 0 ){
+                    first++ ; 
+                    second++ ; 
+                }
+                else if (strcmp(a->val.s[first] , '%' ) == 0 ){
+                    
+                }
+                else if ( strcmp(a->val.s[first] , "_" ) == 0 ){
+                    int first_temp = first ;  
+                }
+            }
+        }
+    }
+
+
+
+
+
 }
 
 void process_query(){
