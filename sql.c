@@ -85,8 +85,27 @@ engine{
         int count ; 
         int capacity ; 
         int register_counter ; 
+        int cursor_num ; 
+        select_info select ; 
     }
 
+    typedef struct plan {
+        bool where ; 
+        bool orderby ; 
+        bool groupby ; 
+        bool case ; 
+        bool join ; 
+        bool from ; 
+        bool select ; 
+        bool case ; 
+        bool having ; 
+    }
+
+    typedef struct comp{
+        plan pl ; 
+        int num_of_stuff ; 
+        int current_num ; 
+    }
 
     void emit(compiler * c , int op_code , int p1 , int p2 , int p3 , void * p4  ){
         if (c->count == c->capacity ){
@@ -102,13 +121,85 @@ engine{
 
     }
 
+    enum column_types{ 
+        expression = 1 , 
+        column_name , 
+        aggregate_func  , 
+        normal 
+    }
 
+    typedef struct select_select_info {
+        column_types col_tp ;
+        char *col_name[300] ; 
+        int col_counter  ; 
+        char * operator ; 
+        select_select_info *left ; 
+        select_select_info * right ; 
+        char * as ; 
+        int * num_value ; 
+        char * char_value ; 
+    }
 
+    typedef struct select_info{
+        select_select_info sel ; 
+    }
 
-    void compile(){
+    typedef struct sql_master {
+        uint32_t root_page_num ; 
 
     }
-}#define _DEFAULT_SOURCE
+
+    typedef struct col_det{
+        char *name ; 
+        int data_type ; 
+    }
+
+    typedef struct table  {
+        char *name ; 
+        int num_of_columns ; 
+        col_det col[300] ; 
+        int root_page_num ; 
+    }
+
+    int col_name_to_int( char * table_name , table * t ){
+        for (int i = 0 ; i < t->num_of_columns ; i++ ){
+           if ( strcmp(t->col[i].name , table_name ) == 0 ){
+              return i ; 
+           }
+        }
+        return -1  ; 
+    }
+
+    typedef struct tables_list{
+        table * tables[300] ; 
+        int num_of_tables ; 
+    }
+
+    table * lookup_table( tables_list * tab , char * table_name ){
+        for ( int i = 0 ; i < tab->num_of_tables ; i++ ){
+           if ( strcmp( tab[i]->name  , table_name  ) == 0 ) { 
+                return tab[i] ; 
+           }
+        }
+        return NULL ; 
+    }
+
+    void compile_select (compiler c ){
+        emit(c , begin_op  , NULL , NULL , NULL , NULL ) ; 
+        int cursor = c->cursor_num++ ; 
+        emit(open_read_op , cursor , sql_master->page_num ,  NULL , NULL , NULL    ) ; 
+        emit(rewind_cursor , cursor , NULL , NULL , NULL , NULL  ) ; 
+        int register_num = c->register_counter++ ; 
+        for ( int i = 0 ; i < c->select.sel.col_counter ; i++  ){
+             emit(column_op ,cursor , col_name_to_int(c->select.sel.col_name[i] , ))
+        }
+        
+        // we leaving at like see the for getting the integer of the column we need the table for the thing so we now only have the column name correctly but which of the table it is start your work from there okay cool 
+            
+
+    }
+}
+#define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 #define _GNU_SOURCE
 #include<stdio.h>
