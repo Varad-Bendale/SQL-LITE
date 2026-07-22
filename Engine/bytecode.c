@@ -156,10 +156,6 @@ bytecode {
         return ans ; 
     }
 
-
-
-
-
     unsigned char * get_data_sort(sort_arr thing , int key , int * lenght , int * type ){
         thing->array + key + 1  ; 
         int pos = 0 ; 
@@ -2492,6 +2488,7 @@ bytecode {
                     byt->btr[op->p1].null = true ; 
                     break ; 
            
+                
                 }
             }
             
@@ -2511,7 +2508,11 @@ int like_campare(reg *a , reg *b ){
                 second++ ; 
             }
             else if (strcmp(a->val.s[first] , '%' ) == 0 ){
-                
+                int temp_fir = first ; 
+                unsigned char temp ; 
+                while (temp_fir < a->lenght &&  strcmp(a->val.s[temp_fir] , '%' ) != 0 ){
+                    memcpy(temp , )
+                }
             }
             else if ( strcmp(a->val.s[first] , "_" ) == 0 ){
                 int first_temp = first ;  
