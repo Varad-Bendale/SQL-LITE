@@ -85,6 +85,7 @@ engine{
         int count ; 
         int capacity ; 
         int register_counter ; 
+        int register_start ; 
         int cursor_num ; 
         select_info select ; 
     }
@@ -140,8 +141,18 @@ engine{
         char * char_value ; 
     }
 
+    typedef struct select_from_info{
+        char * table_name[300] ; 
+        int tables_counter ; 
+        char * operator ; 
+        char * as  ; 
+        select_from_info *left ; 
+        select_from_info * right ; 
+    }
+
     typedef struct select_info{
         select_select_info sel ; 
+        select_from_info from ; 
     }
 
     typedef struct sql_master {
@@ -161,13 +172,29 @@ engine{
         int root_page_num ; 
     }
 
-    int col_name_to_int( char * table_name , table * t ){
+    int col_name_to_int( char * column_name , table * t ){
         for (int i = 0 ; i < t->num_of_columns ; i++ ){
-           if ( strcmp(t->col[i].name , table_name ) == 0 ){
+           if ( strcmp(t->col[i].name , column_name ) == 0 ){
               return i ; 
            }
         }
         return -1  ; 
+    }
+
+    int col_name_to_int_main( char * column_name , select_from_info from  ){
+        int num = -1 ; 
+        for ( int i = 0 ; i < from->tables_counter ; i++ ){
+            int number = col_name_to_int(column_name ,from->table_name[i] ) ; 
+            if ( number  != -1  ){
+                if (num != -1 ){
+                    return -1 ; 
+                }
+                else {
+                    num = number ; 
+                }
+            }  
+        }
+        return num ;  
     }
 
     typedef struct tables_list{
@@ -190,12 +217,26 @@ engine{
         emit(open_read_op , cursor , sql_master->page_num ,  NULL , NULL , NULL    ) ; 
         emit(rewind_cursor , cursor , NULL , NULL , NULL , NULL  ) ; 
         int register_num = c->register_counter++ ; 
+        c->register_start = register_num ; 
+
         for ( int i = 0 ; i < c->select.sel.col_counter ; i++  ){
-             emit(column_op ,cursor , col_name_to_int(c->select.sel.col_name[i] , ))
+            int num = col_name_to_int_main( c->select.sel.col_name[i] , c->select.from   ) ; 
+            if (num != -1 ){
+                register_num = c->register_counter++ ; 
+                 emit(column_op ,cursor , num , register_num  , NULL , NULL ) ; 
+            }
         }
+        emit(result_row ,c->register_start , c->register_start + c->register_counter , NULL  , NULL , NULL ) ; 
         
-        // we leaving at like see the for getting the integer of the column we need the table for the thing so we now only have the column name correctly but which of the table it is start your work from there okay cool 
+        // we leaving at like see the for getting the integer of the column we need the table for the thing so we now only have the column name correctly but which of the table it is start your work from there okay cool one more hin t before going to anywehre just make the struct for the from first we need to get that one and then we find all the tables and then the mystry behind the all the stuff like multiple tables that you work from there okay 
             
 
+
+
+        emit(c, close_cursor_op , cursor, NULL, NULL, NULL, NULL);
+        emit(c, halt, NULL, NULL, NULL, NULL, NULL);
     }
 }
+
+
+c->select.
