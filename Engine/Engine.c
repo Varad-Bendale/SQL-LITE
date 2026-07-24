@@ -211,32 +211,77 @@ engine{
         return NULL ; 
     }
 
-    void compile_select (compiler c ){
+    void compile_select (compiler *c ){
         emit(c , begin_op  , NULL , NULL , NULL , NULL ) ; 
         int cursor = c->cursor_num++ ; 
-        emit(open_read_op , cursor , sql_master->page_num ,  NULL , NULL , NULL    ) ; 
-        emit(rewind_cursor , cursor , NULL , NULL , NULL , NULL  ) ; 
+
+        emit(c , open_read_op , cursor , sql_master->page_num ,  NULL , NULL , NULL    ) ; 
+        emit(c , rewind_cursor , cursor , NULL , NULL , NULL , NULL  ) ; 
         int register_num = c->register_counter++ ; 
         c->register_start = register_num ; 
+        int loop_addr = c->count ; 
+        if (c->select.sel.operator != NULL){
 
-        for ( int i = 0 ; i < c->select.sel.col_counter ; i++  ){
-            int num = col_name_to_int_main( c->select.sel.col_name[i] , c->select.from   ) ; 
-            if (num != -1 ){
-                register_num = c->register_counter++ ; 
-                 emit(column_op ,cursor , num , register_num  , NULL , NULL ) ; 
+        }
+        else  {
+            for ( int i = 0 ; i < c->select.sel.col_counter ; i++  ){
+                int num = col_name_to_int_main( c->select.sel.col_name[i] , c->select.from   ) ; 
+                if (num != -1 ){
+                    register_num = c->register_counter++ ; 
+                    emit(c , column_op ,cursor , num , register_num  , NULL , NULL ) ; 
+                }
             }
         }
-        emit(result_row ,c->register_start , c->register_start + c->register_counter , NULL  , NULL , NULL ) ; 
-        
-        // we leaving at like see the for getting the integer of the column we need the table for the thing so we now only have the column name correctly but which of the table it is start your work from there okay cool one more hin t before going to anywehre just make the struct for the from first we need to get that one and then we find all the tables and then the mystry behind the all the stuff like multiple tables that you work from there okay 
-            
-
-
-
+        emit(c , result_row ,c->register_start , c->register_start + c->register_counter , NULL  , NULL , NULL ) ; 
+        emit(c , next_cursor , cursor , loop_addr   , NULL , NULL )
         emit(c, close_cursor_op , cursor, NULL, NULL, NULL, NULL);
         emit(c, halt, NULL, NULL, NULL, NULL, NULL);
     }
+
+
+// okay one of the most insane boring thing which happens here is see man like the loop occurs in the bytecodes itself so when we like put the register_counter like see we did the thing and as soo nas we hit the next_op it calls the bytecoders which we passed on earleir the earleir one okay only that gets called we are not calling anything in the compile_seelct getting ti it is complelty different thing got it 
+    double func(compiler *c , select_select_info * node ){
+        if (node.left == NULL && node.right == NULL ){
+            return  num ; 
+        }
+        int reg = c->register_counter++  ; 
+
+        if (strcmp(node.operator , "+" )== 0  ) {
+            if (node.col_counter  == 2 ){
+                emit(c , column_op ,cursor , num , c->register_start + c->register_counter  , NULL , NULL ) ;  
+                emit(c , column_op ,cursor , num , c->register_start + c->register_counter + 1  , NULL , NULL ) ;  
+                emit(c , add_op ,c->register_start , c->register_start + 1  , reg , NULL , NULL ) ;                   
+            }
+            else  {
+                emit(c , column_op ,cursor , num , c->register_start  , NULL , NULL ) ;  
+                emit(c , add_op ,c->register_start , reg , reg , NULL , NULL ) ;   
+            }
+        }
+
+
+        if (strcmp(node.operator , "-" )== 0  ) {
+            if (node.col_counter  == 2 ){
+                emit(c , column_op ,cursor , num , c->register_start + c->register_counter  , NULL , NULL ) ;  
+                emit(c , column_op ,cursor , num , c->register_start + c->register_counter + 1  , NULL , NULL ) ;  
+                emit(c , subs_op ,c->register_start , c->register_start + 1  , reg , NULL , NULL ) ;                   
+            }
+            else  {
+                emit(c , column_op ,cursor , num , c->register_start  , NULL , NULL ) ;  
+                emit(c , subs_op ,c->register_start , reg , reg , NULL , NULL ) ;   
+            }
+        }
+
+        
+
+
+
+
+        else if (node->left != NULL  ){
+            func( c , node->left ) ; 
+        }
+        else if (node->right != NULL  ){
+            func( c , node->right ) ; 
+        }
+    }
+
 }
-
-
-c->select.
